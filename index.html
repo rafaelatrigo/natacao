@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3B52">
+<title>Natação · Tempos e Ranking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script>
+  /* ============ CONFIGURAÇÃO ============
+     Cole entre as aspas a URL do App da Web (Apps Script), a que termina em /exec.
+     Com a URL aqui, qualquer pessoa com o link vê os resultados (só leitura).
+     Para lançar tempos, clique em "Editar" e digite o código de edição.
+     Vazio = a página pede a URL na primeira tela (ou abre o modo demonstração). */
+  const SCRIPT_URL = https://script.google.com/macros/s/AKfycbxiArilw2nNIHUMipYvw45KxOd_NuSTLymujbu8jYYG76Ddd_BULLvz1a6V2ZKrrbo0vA/exec;
+  const ATUALIZAR_A_CADA_MS = 20000;   // quem só visualiza vê os resultados atualizando sozinhos
+</script>
+<style>
+/* Layout: faixa superior escura (placar) + coluna de provas à esquerda e área de lançamento à direita; empilha no celular. */
+:root{
+  --agua:#0B3B52; --agua-2:#0F5876; --raia:#E8F1F5;
+  --bg:#F3F6F8; --card:#FFFFFF; --tx:#14232C; --tx2:#5C6F7A; --linha:#DCE5EA;
+  --acento:#F0A12B; --acento-tx:#3A2600;
+  --ouro:#E2B23A; --prata:#B8C3CB; --bronze:#C98B5A;
+  --ok:#1F8A5B; --erro:#C2412D; --aviso:#B7791F;
+  --fonte-disp:"Barlow Condensed",system-ui,sans-serif;
+  --fonte:Inter,system-ui,sans-serif;
+  --fonte-num:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --agua:#082A3B; --agua-2:#0E4C66; --raia:#12303E;
+  --bg:#0C171D; --card:#132229; --tx:#E3ECF0; --tx2:#93A7B2; --linha:#223640;
+  --acento:#F4AE45; --acento-tx:#2B1C00; --ok:#45C08A; --erro:#F07A64; --aviso:#E2A84A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --agua:#082A3B; --agua-2:#0E4C66; --raia:#12303E;
+  --bg:#0C171D; --card:#132229; --tx:#E3ECF0; --tx2:#93A7B2; --linha:#223640;
+  --acento:#F4AE45; --acento-tx:#2B1C00; --ok:#45C08A; --erro:#F07A64; --aviso:#E2A84A; color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--tx);font:14px/1.45 var(--fonte);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.num{font-family:var(--fonte-num);font-variant-numeric:tabular-nums}
+
+header{position:sticky;top:0;z-index:30;color:#fff;background:linear-gradient(170deg,var(--agua-2),var(--agua) 70%);
+  padding:12px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));padding-top:max(12px,env(safe-area-inset-top,0px))}
+header::after{content:"";display:block;height:4px;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));
+  background:repeating-linear-gradient(90deg,#D94A3A 0 18px,#fff 18px 36px,#2D6FD6 36px 54px,#fff 54px 72px);opacity:.85}
+.top{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.marca{display:flex;align-items:baseline;gap:10px;min-width:0}
+.marca h1{font:700 26px/1 var(--fonte-disp);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.marca small{font-size:12px;color:#A9C6D4;letter-spacing:.08em;text-transform:uppercase}
+.acoes-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bt-edicao{font-size:12px;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.35);padding:5px 12px;border-radius:999px}
+.bt-edicao:hover{background:rgba(255,255,255,.12)}
+.estado{display:flex;align-items:center;gap:8px;font-size:12px;color:#CFE0E8;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:5px 10px;border-radius:999px}
+.dot{width:8px;height:8px;border-radius:50%;background:#7FE0AE}
+.dot.salvando{background:var(--acento)} .dot.erro{background:#FF8A75} .dot.demo{background:#B9A6FF}
+nav.abas{max-width:1280px;margin:12px auto 0;display:flex;gap:4px;overflow-x:auto}
+nav.abas button{font:600 16px var(--fonte-disp);letter-spacing:.06em;text-transform:uppercase;color:#B7D0DC;padding:8px 14px 10px;border-radius:8px 8px 0 0;white-space:nowrap}
+nav.abas button[aria-selected="true"]{background:var(--bg);color:var(--tx)}
+
+main{max-width:1280px;margin:0 auto;padding-block:18px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.vista[hidden]{display:none}
+
+/* --- Lançar --- */
+.grade{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}
+.provas{position:sticky;top:132px;background:var(--card);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+.provas h2,.secao h2{font:600 13px var(--fonte);letter-spacing:.08em;text-transform:uppercase;color:var(--tx2)}
+.provas h2{padding:12px 14px 8px}
+.provas ol{list-style:none;max-height:calc(100vh - 200px);overflow:auto}
+.provas li button{width:100%;text-align:left;display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:9px 14px;border-top:1px solid var(--linha)}
+.provas li button:hover{background:var(--raia)}
+.provas li button[aria-current="true"]{background:var(--raia);box-shadow:inset 3px 0 0 var(--acento)}
+.provas .n{font:600 15px var(--fonte-disp);color:var(--tx2)}
+.provas .nome{font-weight:500;line-height:1.25}
+.provas .prog{font-size:11px;color:var(--tx2)} .provas .prog.cheio{color:var(--ok);font-weight:600}
+.sel-prova{display:none}
+
+.painel{display:grid;gap:18px;min-width:0}
+.cab-prova{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:10px}
+.cab-prova h2{font:700 30px/1.05 var(--fonte-disp);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+.cab-prova p{color:var(--tx2);font-size:13px}
+.chip{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--raia);color:var(--tx2)}
+.chip.rev{background:var(--acento);color:var(--acento-tx)}
+
+.card{background:var(--card);border:1px solid var(--linha);border-radius:12px;min-width:0}
+.tabela-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font:600 11px var(--fonte);letter-spacing:.07em;text-transform:uppercase;color:var(--tx2);text-align:left;padding:10px 8px;border-bottom:1px solid var(--linha);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--linha);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.lanc td:first-child{color:var(--tx2);width:34px;text-align:center}
+.campo{width:100%;min-width:90px;border:1px solid transparent;background:transparent;border-radius:6px;padding:6px 7px}
+.campo:hover{border-color:var(--linha)} .campo:focus{border-color:var(--agua-2);background:var(--bg);outline:none}
+.campo.nome{min-width:270px;font-weight:500}
+.campo.tempo::placeholder{color:var(--tx2);opacity:.6}
+.campo.tempo{width:112px;min-width:112px;font-family:var(--fonte-num);font-size:15px;text-align:right;border-color:var(--linha);background:var(--bg)}
+.campo.tempo.inv{border-color:var(--erro);background:color-mix(in srgb,var(--erro) 10%,var(--bg))}
+.integr{display:block;font-size:11px;color:var(--tx2);padding:0 7px 4px;max-width:340px}
+.sit{display:inline-flex;border:1px solid var(--linha);border-radius:8px;overflow:hidden}
+.sit button{font-size:12px;font-weight:600;padding:6px 9px;color:var(--tx2);white-space:nowrap}
+.sit button+button{border-left:1px solid var(--linha)}
+.sit button[aria-pressed="true"]{background:var(--agua-2);color:#fff}
+.sit button.dq[aria-pressed="true"]{background:var(--erro)} .sit button.wo[aria-pressed="true"]{background:var(--aviso)}
+.st{width:18px;text-align:center;font-size:13px}
+.st.salvando::after{content:"…";color:var(--aviso)} .st.ok::after{content:"✓";color:var(--ok)} .st.erro::after{content:"!";color:var(--erro);font-weight:700}
+.rm{font-size:12px;color:var(--tx2);padding:4px 6px;border-radius:6px;white-space:nowrap}
+.rm:hover{color:var(--erro)} .rm.conf{background:var(--erro);color:#fff}
+.dica{font-size:12px;color:var(--tx2);padding:10px 12px;border-top:1px solid var(--linha)}
+
+.incluir{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-top:1px dashed var(--linha);align-items:center}
+.incluir input{flex:1 1 160px;min-width:0;border:1px solid var(--linha);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.btn{font-weight:600;padding:9px 14px;border-radius:8px;background:var(--agua-2);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.claro{background:var(--raia);color:var(--tx)}
+
+/* --- Classificação --- */
+.classif .lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto 56px;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--linha)}
+.classif .lin:first-child{border-top:0}
+.pos{font:700 22px/1 var(--fonte-disp);text-align:center;color:var(--tx2)}
+.pos.p1{color:var(--ouro)} .pos.p2{color:var(--prata)} .pos.p3{color:var(--bronze)}
+.pos.fora{font-size:14px;letter-spacing:.04em;color:var(--erro)} .pos.fora.wo{color:var(--aviso)}
+.quem b{font-weight:600;display:block;overflow-wrap:anywhere} .quem span{font-size:12px;color:var(--tx2)}
+.t{font-family:var(--fonte-num);font-size:15px;text-align:right}
+.pts{font:700 20px/1 var(--fonte-disp);text-align:right} .pts small{font:500 11px var(--fonte);color:var(--tx2);margin-left:2px}
+.vazio{padding:22px 16px;color:var(--tx2);text-align:center}
+.secao{display:grid;gap:12px}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.filtros button{font-weight:600;font-size:13px;padding:7px 12px;border-radius:999px;border:1px solid var(--linha);background:var(--card);color:var(--tx2)}
+.filtros button[aria-pressed="true"]{background:var(--agua-2);border-color:var(--agua-2);color:#fff}
+.grid-classif{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:16px}
+.grid-classif .card h3{font:700 19px var(--fonte-disp);text-transform:uppercase;padding:12px 14px 4px;display:flex;justify-content:space-between;gap:8px}
+.grid-classif .card h3 small{font:500 12px var(--fonte);color:var(--tx2);text-transform:none}
+
+/* --- Ranking geral --- */
+.podio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.podio .card{padding:16px;display:grid;gap:4px}
+.podio .lugar{font:700 14px var(--fonte-disp);letter-spacing:.1em;text-transform:uppercase}
+.podio .p1 .lugar{color:var(--ouro)} .podio .p2 .lugar{color:var(--prata)} .podio .p3 .lugar{color:var(--bronze)}
+.podio .eq{font:700 24px/1.1 var(--fonte-disp);text-transform:uppercase;overflow-wrap:anywhere}
+.podio .val{font:700 34px/1 var(--fonte-disp)} .podio .val small{font:500 13px var(--fonte);color:var(--tx2)}
+.geral td.c{text-align:center;font-family:var(--fonte-num);color:var(--tx2)}
+.geral td.p{font:700 18px var(--fonte-disp);text-align:right}
+.geral td.r{font:700 18px var(--fonte-disp);width:48px;text-align:center}
+.nota{font-size:12px;color:var(--tx2);max-width:72ch}
+
+/* --- Entrada / avisos --- */
+.entrada{max-width:440px;margin:40px auto;display:grid;gap:14px}
+.entrada h2{font:700 28px var(--fonte-disp);text-transform:uppercase}
+.entrada label{display:grid;gap:6px;font-weight:600;font-size:13px}
+.entrada input{border:1px solid var(--linha);border-radius:8px;padding:10px 12px;background:var(--card);font-weight:400}
+.erro-msg{color:var(--erro);font-size:13px;min-height:1em}
+.toast{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:50;background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;display:flex;gap:12px;align-items:center;max-width:calc(100vw - 32px)}
+.toast button{color:var(--acento);font-weight:600}
+.banner-demo{background:color-mix(in srgb,#B9A6FF 22%,var(--card));border:1px solid color-mix(in srgb,#B9A6FF 45%,var(--linha));border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+
+@media (max-width:860px){
+  .grade{grid-template-columns:minmax(0,1fr)}
+  .provas{display:none}
+  .sel-prova{display:block;width:100%;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--card);font-weight:600}
+  .podio{grid-template-columns:minmax(0,1fr)}
+  .cab-prova h2{font-size:24px}
+  .marca small{display:none}
+  .marca h1{font-size:22px}
+}
+@media (max-width:860px){
+  .lanc thead{display:none}
+  .lanc tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"nome nome" "atl inst" "tempo tempo" "sit sit" "obs obs" "st rm";gap:6px 8px;padding:12px;border-bottom:1px solid var(--linha)}
+  .lanc tbody tr:last-child{border-bottom:0}
+  .lanc tbody td{border:0;padding:0;width:auto!important;text-align:left!important}
+  .lanc td.c-n{display:none} .lanc td.c-nome{grid-area:nome} .lanc td.c-atl{grid-area:atl} .lanc td.c-inst{grid-area:inst}
+  .lanc td.c-tempo{grid-area:tempo} .lanc td.c-sit{grid-area:sit} .lanc td.c-obs{grid-area:obs} .lanc td.c-st{grid-area:st;align-self:center} .lanc td.c-rm{grid-area:rm;justify-self:end}
+  .campo,.campo.nome,.campo.tempo{min-width:0!important;width:100%;font-size:16px}
+  .campo{border-color:var(--linha)} .campo.nome{font-weight:600}
+  .campo.tempo{text-align:left;font-size:18px;padding:10px}
+  .sit{display:flex} .sit button{flex:1;padding:10px 6px;font-size:13px}
+  .lanc td.vazio{grid-column:1/-1}
+  .incluir input{flex-basis:100%;font-size:16px}
+}
+@media (prefers-reduced-motion:no-preference){.st::after{transition:opacity .2s}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="marca"><h1 id="titulo">Natação</h1><small>Tempos e ranking</small></div>
+    <div class="acoes-top"><div class="estado" id="estado"><span class="dot" id="dot"></span><span id="estadoTx">Conectando…</span></div><button type="button" class="bt-edicao" id="btEdicao" hidden>Editar</button></div>
+  </div>
+  <nav class="abas" role="tablist">
+    <button role="tab" data-vista="lancar" aria-selected="true" id="abaLancar">Lançar tempos</button>
+    <button role="tab" data-vista="classif" aria-selected="false">Classificação</button>
+    <button role="tab" data-vista="geral" aria-selected="false">Ranking geral</button>
+  </nav>
+</header>
+
+<main>
+  <div id="bannerDemo" class="banner-demo" hidden>Modo demonstração: os tempos ficam só nesta tela e somem ao recarregar. Para salvar na planilha, informe a URL do Apps Script.</div>
+
+  <section id="entrada" class="entrada" hidden>
+    <h2 id="entTit">Conectar à planilha</h2>
+    <p class="nota" id="entTx">Cole a URL do App da Web do Apps Script (termina em <span class="num">/exec</span>) e o código de edição definido no script.</p>
+    <label id="lblUrl">URL do Apps Script<input id="inUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></label>
+    <label>Código de edição<input id="inCod" type="password" autocomplete="current-password"></label>
+    <div class="erro-msg" id="errEnt"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="btEntrar">Conectar</button><button class="btn claro" id="btCancelar" hidden>Só visualizar</button><button class="btn claro" id="btDemo">Ver demonstração</button></div>
+  </section>
+
+  <section class="vista" id="v-lancar">
+    <div class="grade">
+      <aside class="provas"><h2>Provas</h2><ol id="listaProvas"></ol></aside>
+      <div class="painel">
+        <select class="sel-prova" id="selProva" aria-label="Prova"></select>
+        <div class="cab-prova">
+          <div><h2 id="nomeProva">—</h2><p id="infoProva"></p></div>
+          <span class="chip" id="chipProva"></span>
+        </div>
+        <div class="card">
+          <div class="tabela-wrap">
+            <table class="lanc">
+              <thead><tr><th>#</th><th id="thAtleta">Atleta</th><th>Atlética</th><th>Instituição</th><th style="text-align:right">Tempo</th><th>Situação</th><th>Observação</th><th></th><th></th></tr></thead>
+              <tbody id="corpo"></tbody>
+            </table>
+          </div>
+          <div class="dica">Tempo: <span class="num">28,64</span> ou <span class="num">1:05,32</span> (também aceita <span class="num">1'05"32</span>). Três casas = milésimos (<span class="num">1:20,044</span>). <b>Enter</b> salva e vai para o próximo atleta. Apague o tempo para limpar.</div>
+          <form class="incluir" id="formIncluir">
+            <select id="novoProva" aria-label="Prova do novo atleta" style="flex:1 1 220px;min-width:0;border:1px solid var(--linha);border-radius:8px;padding:8px 10px;background:var(--bg)"></select>
+            <input id="novoNome" placeholder="Incluir atleta (nome)" required>
+            <input id="novoAtl" placeholder="Atlética">
+            <input id="novoInst" placeholder="Instituição">
+            <button class="btn" id="btIncluir">Incluir</button>
+          </form>
+        </div>
+        <div class="secao">
+          <h2>Classificação desta prova</h2>
+          <div class="card classif" id="classProva"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="vista secao" id="v-classif" hidden>
+    <div class="filtros" id="filtrosClassif"></div>
+    <div class="grid-classif" id="gridClassif"></div>
+  </section>
+
+  <section class="vista secao" id="v-geral" hidden>
+    <div class="filtros" id="filtrosGeral"></div>
+    <div class="podio" id="podio"></div>
+    <div class="card tabela-wrap">
+      <table class="geral"><thead id="cabGeral"></thead><tbody id="corpoGeral"></tbody></table>
+    </div>
+    <p class="nota" id="notaGeral"></p>
+  </section>
+</main>
+<div class="toast" id="toast" hidden><span id="toastTx"></span><button id="toastBt" hidden>Tentar de novo</button></div>
+
+<script>
+// ===== Regras de classificação (mesmas na página e no Apps Script) =====
+// Empate: mesma posição, a seguinte é pulada. Desclassificado / W.O.: fim da lista, 0 ponto, não ocupa posição.
+// Pontos por posição vêm da aba "Pontuação". Desempate do geral: pontos > menos W.O. > mais 1º, 2º ... 10º > nome.
+var EPS_S = 0.0005;
+function categoriaDaProva(nome) {
+  var n = String(nome || '').toUpperCase();
+  if (n.indexOf('FEMININO') >= 0) return 'Feminino';
+  if (n.indexOf('MASCULINO') >= 0) return 'Masculino';
+  return 'Misto';
+}
+function chaveEquipe(atletica, inst) {
+  var a = String(atletica || '').trim(), i = String(inst || '').trim();
+  return a && i ? a + ' - ' + i : (a || i);
+}
+function classificarProva(inscricoes, tabela) {
+  var ok = inscricoes.filter(function (e) { return !e.situacao && typeof e.seg === 'number' && isFinite(e.seg); })
+    .sort(function (a, b) { return a.seg - b.seg || a.ordem - b.ordem; });
+  var fora = inscricoes.filter(function (e) { return !!e.situacao; })
+    .sort(function (a, b) { var x = typeof a.seg === 'number' ? a.seg : 1e9, y = typeof b.seg === 'number' ? b.seg : 1e9; return x - y || a.ordem - b.ordem; });
+  var out = [], prev = null;
+  ok.forEach(function (e) {
+    var pos = 1; ok.forEach(function (o) { if (o.seg < e.seg - EPS_S) pos++; });
+    var empate = prev && Math.abs(prev.seg - e.seg) < EPS_S;
+    out.push({ e: e, pos: pos, rotulo: empate ? '' : String(pos), pts: pos <= tabela.length ? (Number(tabela[pos - 1]) || 0) : 0 });
+    prev = e;
+  });
+  fora.forEach(function (e) { out.push({ e: e, pos: null, rotulo: e.situacao === 'W.O.' ? 'W.O.' : 'DESC', pts: 0 }); });
+  return out;
+}
+function rankingGeral(provas, inscricoes, pontos, filtro) {
+  var NP = pontos.individual.length, mapa = {};
+  function eq(k) { if (!mapa[k]) { mapa[k] = { nome: k, pts: 0, wo: 0, col: [] }; for (var i = 0; i < NP; i++) mapa[k].col.push(0); } return mapa[k]; }
+  inscricoes.forEach(function (e) { var k = chaveEquipe(e.atletica, e.inst); if (k) eq(k); });
+  provas.forEach(function (p) {
+    if (filtro && filtro !== 'Geral' && categoriaDaProva(p.nome) !== filtro) return;
+    var lista = inscricoes.filter(function (e) { return e.provaId === p.id; });
+    classificarProva(lista, p.revezamento ? pontos.revezamento : pontos.individual).forEach(function (r) {
+      var k = chaveEquipe(r.e.atletica, r.e.inst); if (!k) return;
+      var t = eq(k); t.pts += r.pts;
+      if (r.e.situacao === 'W.O.') t.wo++;
+      if (r.pos && r.pos <= NP) t.col[r.pos - 1]++;
+    });
+  });
+  var lista = Object.keys(mapa).map(function (k) { return mapa[k]; });
+  function cmp(a, b, comNome) {
+    if (a.pts !== b.pts) return b.pts - a.pts;
+    if (a.wo !== b.wo) return a.wo - b.wo;
+    for (var i = 0; i < NP; i++) if (a.col[i] !== b.col[i]) return b.col[i] - a.col[i];
+    return comNome ? a.nome.localeCompare(b.nome, 'pt-BR') : 0;
+  }
+  lista.sort(function (a, b) { return cmp(a, b, true); });
+  lista.forEach(function (t, i) { t.pos = (i > 0 && cmp(lista[i - 1], t, false) === 0) ? lista[i - 1].pos : i + 1; });
+  return lista;
+}
+function formatarTempo(seg) {
+  if (typeof seg !== 'number' || !isFinite(seg)) return '';
+  var ms = Math.round(seg * 1000), m = Math.floor(ms / 60000), r = ms - m * 60000, s = Math.floor(r / 1000), f = r - s * 1000;
+  var fr = (f % 10 === 0) ? String(f / 10).padStart(2, '0') : String(f).padStart(3, '0');
+  return (m ? m + ':' + String(s).padStart(2, '0') : String(s)) + ',' + fr;
+}
+
+const DEMO_DATA = {"titulo": "Natação · Demonstração", "provas": [{"id": "p01", "ordem": 1, "nome": "50M LIVRE FEMININO", "revezamento": false}, {"id": "p02", "ordem": 2, "nome": "50M PEITO FEMININO", "revezamento": false}, {"id": "p03", "ordem": 3, "nome": "50M COSTAS FEMININO", "revezamento": false}, {"id": "p04", "ordem": 4, "nome": "50M BORBOLETA FEMININO", "revezamento": false}, {"id": "p05", "ordem": 5, "nome": "100M LIVRE FEMININO", "revezamento": false}, {"id": "p06", "ordem": 6, "nome": "50M LIVRE MASCULINO", "revezamento": false}, {"id": "p07", "ordem": 7, "nome": "50M PEITO MASCULINO", "revezamento": false}, {"id": "p08", "ordem": 8, "nome": "50M COSTAS MASCULINO", "revezamento": false}, {"id": "p09", "ordem": 9, "nome": "50M BORBOLETA MASCULINO", "revezamento": false}, {"id": "p10", "ordem": 10, "nome": "100M LIVRE MASCULINO", "revezamento": false}, {"id": "p11", "ordem": 11, "nome": "REVEZAMENTO 4X50M LIVRE MISTO", "revezamento": true}], "inscricoes": [{"id": "1", "provaId": "p01", "atleta": "Maria Eduarda Pereira de Carvalho", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 1}, {"id": "2", "provaId": "p01", "atleta": "Taíssa Araujo Dias dos Santos", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 2}, {"id": "3", "provaId": "p01", "atleta": "Elis da Conceição Santos Cruz", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 3}, {"id": "4", "provaId": "p01", "atleta": "Ana Júlia Assis Teixeira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 4}, {"id": "5", "provaId": "p01", "atleta": "Maria Carolina Azevedo Silva Lobo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 5}, {"id": "6", "provaId": "p01", "atleta": "Mariana Campos dos Santos Rosa", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 6}, {"id": "7", "provaId": "p01", "atleta": "Adriana Menezes Santos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 7}, {"id": "8", "provaId": "p01", "atleta": "Ana Raquel Calmon De Souza", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 8}, {"id": "9", "provaId": "p01", "atleta": "Beatriz Iglesias Benedito", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 9}, {"id": "10", "provaId": "p01", "atleta": "Sofia Madeira de Almeida", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 10}, {"id": "11", "provaId": "p01", "atleta": "MARIA EDUARDA VILAS BOAS", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 11}, {"id": "12", "provaId": "p01", "atleta": "NINA MUNIZ BARRETO MIRANDA", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 12}, {"id": "13", "provaId": "p01", "atleta": "FERNANDA COSTA GARRIDO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 13}, {"id": "14", "provaId": "p01", "atleta": "Gabriela Cerqueira Souza", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 14}, {"id": "15", "provaId": "p01", "atleta": "Emmanuelle Simas Murta", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 15}, {"id": "16", "provaId": "p01", "atleta": "Maria Eduarda Santos dos Reis", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 16}, {"id": "17", "provaId": "p02", "atleta": "Taíssa Araujo Dias dos Santos", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 17}, {"id": "18", "provaId": "p02", "atleta": "Elis da Conceição Santos Cruz", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 18}, {"id": "19", "provaId": "p02", "atleta": "Lavinia dos Santos Cabral", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 19}, {"id": "20", "provaId": "p02", "atleta": "Mariana Campos dos Santos Rosa", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 20}, {"id": "21", "provaId": "p02", "atleta": "Adriana Menezes Santos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 21}, {"id": "22", "provaId": "p02", "atleta": "Beatriz Iglesias Benedito", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 22}, {"id": "23", "provaId": "p02", "atleta": "Isabelle Victoria de Morais Lobo", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 23}, {"id": "24", "provaId": "p02", "atleta": "Sofia Madeira de Almeida", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 24}, {"id": "25", "provaId": "p02", "atleta": "MARIA EDUARDA VILAS BOAS", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 25}, {"id": "26", "provaId": "p02", "atleta": "FERNANDA COSTA GARRIDO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 26}, {"id": "27", "provaId": "p02", "atleta": "Maria Fernanda Carvalho Marques", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 27}, {"id": "28", "provaId": "p02", "atleta": "Emmanuelle Simas Murta", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 28}, {"id": "29", "provaId": "p02", "atleta": "Gabriela Cerqueira Souza", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 29}, {"id": "30", "provaId": "p03", "atleta": "Elis da Conceição Santos Cruz", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 30}, {"id": "31", "provaId": "p03", "atleta": "Maria Carolina Azevedo Silva Lobo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 31}, {"id": "32", "provaId": "p03", "atleta": "Ana Júlia Assis Teixeira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 32}, {"id": "33", "provaId": "p03", "atleta": "Ana Raquel Calmon de Souza", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 33}, {"id": "34", "provaId": "p03", "atleta": "Beatriz Rocha Passos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 34}, {"id": "35", "provaId": "p03", "atleta": "Isabelle Victória de Morais Lobo", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 35}, {"id": "36", "provaId": "p03", "atleta": "Sofia Madeira de Almeida", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 36}, {"id": "37", "provaId": "p03", "atleta": "MARIA EDUARDA VILAS BOAS", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 37}, {"id": "38", "provaId": "p03", "atleta": "FERNANDA COSTA GARRIDO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 38}, {"id": "39", "provaId": "p03", "atleta": "Maria Eduarda Santos dos Reis", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 39}, {"id": "40", "provaId": "p03", "atleta": "Emmanuelle Simas Murta", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 40}, {"id": "41", "provaId": "p03", "atleta": "Gabriela Cerqueira Souza", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 41}, {"id": "42", "provaId": "p04", "atleta": "Elis da Conceição Santos Cruz", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 42}, {"id": "43", "provaId": "p04", "atleta": "Ana Júlia Assis Teixeira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 43}, {"id": "44", "provaId": "p04", "atleta": "Lavinia dos Santos Cabral", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 44}, {"id": "45", "provaId": "p04", "atleta": "Ana Raquel Calmon de Souza", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 45}, {"id": "46", "provaId": "p04", "atleta": "Isabelle Victória de Morais Lobo", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 46}, {"id": "47", "provaId": "p04", "atleta": "Beatriz Rocha Passos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 47}, {"id": "48", "provaId": "p04", "atleta": "Sofia Madeira de Almeida", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 48}, {"id": "49", "provaId": "p04", "atleta": "FERNANDA COSTA GARRIDO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 49}, {"id": "50", "provaId": "p04", "atleta": "MARIA EDUARDA VILAS BOAS", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 50}, {"id": "51", "provaId": "p04", "atleta": "Gabriela Cerqueira Souza", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 51}, {"id": "52", "provaId": "p05", "atleta": "Taíssa Araujo Dias dos Santos", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 52}, {"id": "53", "provaId": "p05", "atleta": "Ana Júlia Assis Teixeira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 53}, {"id": "54", "provaId": "p05", "atleta": "Lavinia dos Santos Cabral", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 54}, {"id": "55", "provaId": "p05", "atleta": "Elis da Conceição Santos Cruz", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 55}, {"id": "56", "provaId": "p05", "atleta": "Ana Raquel Calmon de Souza", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 56}, {"id": "57", "provaId": "p05", "atleta": "Beatriz Rocha Passos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 57}, {"id": "58", "provaId": "p05", "atleta": "Isabelle Victória de Morais Lobo", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 58}, {"id": "59", "provaId": "p05", "atleta": "FERNANDA COSTA GARRIDO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 59}, {"id": "60", "provaId": "p05", "atleta": "NINA MUNIZ BARRETO MIRANDA", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 60}, {"id": "61", "provaId": "p05", "atleta": "MARIA EDUARDA VILAS BOAS", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 61}, {"id": "62", "provaId": "p05", "atleta": "Gabriela Cerqueira Souza", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 62}, {"id": "63", "provaId": "p05", "atleta": "Emmanuelle Simas Murta", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 63}, {"id": "64", "provaId": "p06", "atleta": "Gabriel Torres da Silva Torres", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 64}, {"id": "65", "provaId": "p06", "atleta": "Isaac Santana Santos Pires", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 65}, {"id": "66", "provaId": "p06", "atleta": "Iago da costa machado gois", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 66}, {"id": "67", "provaId": "p06", "atleta": "Tito Gabriel Alves Fernandes Macedo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 67}, {"id": "68", "provaId": "p06", "atleta": "Ary Maximus Ferreira Ramos", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 68}, {"id": "69", "provaId": "p06", "atleta": "Eduardo dos Santos Cruz", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 69}, {"id": "70", "provaId": "p06", "atleta": "Bruno Vinícius Moura Ferreira", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 70}, {"id": "71", "provaId": "p06", "atleta": "Fernando Messias Rosa Santos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 71}, {"id": "72", "provaId": "p06", "atleta": "Israel Carvalho Souza", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 72}, {"id": "73", "provaId": "p06", "atleta": "João Pedro Freitas Dantas", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 73}, {"id": "74", "provaId": "p06", "atleta": "MARCEL LAVIGNE SGARIONI", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 74}, {"id": "75", "provaId": "p06", "atleta": "SOL ROCHA VILAS BOAS SARMENTO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 75}, {"id": "76", "provaId": "p06", "atleta": "Kauã Dennys Figueredo Dos Santos", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 76}, {"id": "77", "provaId": "p06", "atleta": "Caio Conceição Sales", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 77}, {"id": "78", "provaId": "p07", "atleta": "Ary Maximus Ferreira Ramos", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 78}, {"id": "79", "provaId": "p07", "atleta": "Antônio Henrique Gomes Da Silva Fonseca", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 79}, {"id": "80", "provaId": "p07", "atleta": "Luis Andre Cavalcante Browne e Oliveira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 80}, {"id": "81", "provaId": "p07", "atleta": "Tito Gabriel Alves Fernandes Macedo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 81}, {"id": "82", "provaId": "p07", "atleta": "Fernando Messias Rosa Santos", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 82}, {"id": "83", "provaId": "p07", "atleta": "Tiago Duarte da Costa", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 83}, {"id": "84", "provaId": "p07", "atleta": "João Pedro Freitas Dantas", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 84}, {"id": "85", "provaId": "p07", "atleta": "Matheus Lima Pamplona", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 85}, {"id": "86", "provaId": "p07", "atleta": "MARCEL SGARIONI", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 86}, {"id": "87", "provaId": "p07", "atleta": "SOL ROCHA VILAS BOAS SARMENTO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 87}, {"id": "88", "provaId": "p07", "atleta": "Caio Conceição Sales", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 88}, {"id": "89", "provaId": "p07", "atleta": "Kauã Dennys Figueredo Dos Santos", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 89}, {"id": "90", "provaId": "p07", "atleta": "João Victor Rego Sanfront", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 90}, {"id": "91", "provaId": "p08", "atleta": "Luis Andre Cavalcante Browne e Oliveira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 91}, {"id": "92", "provaId": "p08", "atleta": "Antônio Henrique Gomes Da Silva Fonseca", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 92}, {"id": "93", "provaId": "p08", "atleta": "Tito Gabriel Alves Fernandes Macedo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 93}, {"id": "94", "provaId": "p08", "atleta": "Tiago Duarte da Costa", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 94}, {"id": "95", "provaId": "p08", "atleta": "Bruno Vinícius Moura Ferreira", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 95}, {"id": "96", "provaId": "p08", "atleta": "João Pedro Freitas Dantas", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 96}, {"id": "97", "provaId": "p08", "atleta": "Matheus Lima Pamplona", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 97}, {"id": "98", "provaId": "p08", "atleta": "SOL ROCHA VILAS BOAS SARMENTO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 98}, {"id": "99", "provaId": "p08", "atleta": "MARCEL LAVIGNE SGARIONI", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 99}, {"id": "100", "provaId": "p08", "atleta": "Kauã Dennys Figueredo Dos Santos", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 100}, {"id": "101", "provaId": "p08", "atleta": "Caio Conceição Sales", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 101}, {"id": "102", "provaId": "p09", "atleta": "Luis Andre Cavalcante Browne e Oliveira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 102}, {"id": "103", "provaId": "p09", "atleta": "Kaique Alburquerque Mattos", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 103}, {"id": "104", "provaId": "p09", "atleta": "Tito Gabriel Alves Fernandes Macedo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 104}, {"id": "105", "provaId": "p09", "atleta": "Antônio Henrique Gomes Da Silva Fonseca", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 105}, {"id": "106", "provaId": "p09", "atleta": "Fernando Messias Rosa Santoas", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 106}, {"id": "107", "provaId": "p09", "atleta": "Tiago Duarte da Costa", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 107}, {"id": "108", "provaId": "p09", "atleta": "Israel Carvalho Souza", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 108}, {"id": "109", "provaId": "p09", "atleta": "Matheus Lima Pamplona", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 109}, {"id": "110", "provaId": "p09", "atleta": "MARCEL LAVIGNE SGARIONI", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 110}, {"id": "111", "provaId": "p09", "atleta": "SOL ROCHA VILAS BOAS SARMENTO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 111}, {"id": "112", "provaId": "p09", "atleta": "Caio Conceição Sales", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 112}, {"id": "113", "provaId": "p10", "atleta": "Tulio Cincinato Correia", "atletica": "", "inst": "UNEB", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 113}, {"id": "114", "provaId": "p10", "atleta": "Iago da costa machado gois", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 114}, {"id": "115", "provaId": "p10", "atleta": "Antônio Henrique Gomes Da Silva Fonseca", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 115}, {"id": "116", "provaId": "p10", "atleta": "Luis Andre Cavalcante Browne e Oliveira", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 116}, {"id": "117", "provaId": "p10", "atleta": "Tito Gabriel Alves Fernandes Macedo", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 117}, {"id": "118", "provaId": "p10", "atleta": "Tiago Duarte da Costa", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 118}, {"id": "119", "provaId": "p10", "atleta": "João Pedro Freitas Dantas", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 119}, {"id": "120", "provaId": "p10", "atleta": "Matheus Lima Pamplona", "atletica": "", "inst": "UFBA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 120}, {"id": "121", "provaId": "p10", "atleta": "SOL ROCHA VILAS BOAS SARMENTO", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 121}, {"id": "122", "provaId": "p10", "atleta": "MARCEL LAVIGNE SGARIONI", "atletica": "", "inst": "BAIANA", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 122}, {"id": "123", "provaId": "p10", "atleta": "Caio Conceição Sales", "atletica": "", "inst": "ADUC", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 123}, {"id": "124", "provaId": "p11", "atleta": "UNEB", "atletica": "", "inst": "UNEB", "integrantes": "Maria Eduarda Pereira de Carvalho, Taíssa Araujo Dias dos Santos, Tulio Cincinato Correia, Isaac Santana Santos Pires", "seg": null, "situacao": "", "obs": "", "ordem": 124}, {"id": "125", "provaId": "p11", "atleta": "UNIFACS", "atletica": "", "inst": "UNIFACS", "integrantes": "", "seg": null, "situacao": "", "obs": "", "ordem": 125}, {"id": "126", "provaId": "p11", "atleta": "UFBA", "atletica": "", "inst": "UFBA", "integrantes": "Ana Raquel Calmon de Souza, Beatriz Iglesias Benedito, Fernando Messias Rosa Santos, Israel Carvalho Souza", "seg": null, "situacao": "", "obs": "", "ordem": 126}, {"id": "127", "provaId": "p11", "atleta": "BAIANA", "atletica": "", "inst": "BAIANA", "integrantes": "MARCEL LAVIGNE SGARIONI, SOL ROCHA VILAS BOAS SARMENTO, FERNANDA COSTA GARRIDO, MARIA EDUARDA VILAS BOAS", "seg": null, "situacao": "", "obs": "", "ordem": 127}, {"id": "128", "provaId": "p11", "atleta": "ADUC", "atletica": "", "inst": "ADUC", "integrantes": "Caio Conceição Sales, Maria Eduarda Santos dos Reis, Gabriela Cerqueira Souza, Kauã Dennys", "seg": null, "situacao": "", "obs": "", "ordem": 128}], "pontos": {"individual": [25, 18, 15, 12, 10, 8, 6, 4, 2, 1], "revezamento": [50, 36, 30, 24, 20, 16, 12, 8, 4, 2]}};
+
+const $ = id => document.getElementById(id);
+const LS = {
+  get:(k,d)=>{try{const v=localStorage.getItem('nat_'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},
+  set:(k,v)=>{try{localStorage.setItem('nat_'+k,JSON.stringify(v))}catch(e){}}
+};
+let URL_API = SCRIPT_URL || LS.get('url','');
+let DEMO = false;
+const S = { titulo:'', provas:[], inscricoes:[], pontos:{individual:[],revezamento:[]}, provaSel: LS.get('prova',null), vista:'lancar', filtroC:'Geral', filtroG:'Geral' };
+const pend = new Map();     // id -> nº de salvamentos em andamento
+const estadoLinha = {};     // id -> 'salvando'|'ok'|'erro'
+let ultimoErro = null;
+
+/* ---------- API ---------- */
+async function api(acao, p={}){
+  if (DEMO) return demoApi(acao, p);
+  const u = new URL(URL_API);
+  Object.entries({...p, acao, ...(acao==='listar'?{}:{codigo: LS.get('codigo','')})}).forEach(([k,v])=>u.searchParams.set(k, v ?? ''));
+  const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 25000);
+  try{
+    const r = await fetch(u.toString(), {signal: ctl.signal});
+    return await r.json();
+  } finally { clearTimeout(tm); }
+}
+function demoApi(acao, p){
+  if (acao==='listar') return Promise.resolve({ok:true, ...JSON.parse(JSON.stringify(DEMO_STATE))});
+  if (acao==='salvar'){ const e = DEMO_STATE.inscricoes.find(x=>x.id===p.id); if(!e) return {ok:false,erro:'nao_encontrado'};
+    if('seg' in p) e.seg = p.seg===''?null:Number(p.seg); ['situacao','obs','atleta','atletica','inst'].forEach(k=>{if(k in p) e[k]=p[k]}); return Promise.resolve({ok:true}); }
+  if (acao==='adicionar'){ const id = String(Math.max(0,...DEMO_STATE.inscricoes.map(e=>+e.id))+1);
+    DEMO_STATE.inscricoes.push({id, provaId:p.provaId, atleta:p.atleta, atletica:p.atletica||'', inst:p.inst||'', integrantes:'', seg:null, situacao:'', obs:'Incluído na página', ordem:DEMO_STATE.inscricoes.length+1}); return Promise.resolve({ok:true,id}); }
+  if (acao==='remover'){ DEMO_STATE.inscricoes = DEMO_STATE.inscricoes.filter(e=>e.id!==p.id); return Promise.resolve({ok:true}); }
+}
+let DEMO_STATE = null;
+
+/* ---------- Tempo ---------- */
+function lerTempo(txt){
+  let s = String(txt||'').trim().replace(/\s+/g,'');
+  if (!s) return {vazio:true};
+  s = s.replace(/[’'′]/g, ':').replace(/[”"″]/g, ',');
+  let m, h=0, min=0, sec=0, frac='';
+  if ((m = s.match(/^(\d+):(\d{1,2}):(\d{1,2})(?:[,.](\d{1,3}))?$/))) { h=+m[1]; min=+m[2]; sec=+m[3]; frac=m[4]||''; }
+  else if ((m = s.match(/^(\d+)[:.](\d{1,2})[,.](\d{1,3})$/))) { min=+m[1]; sec=+m[2]; frac=m[3]; }
+  else if ((m = s.match(/^(\d+):(\d{1,2})$/))) { min=+m[1]; sec=+m[2]; }
+  else if ((m = s.match(/^(\d+)(?:[,.](\d{1,3}))?$/))) { sec=+m[1]; frac=m[2]||''; }
+  else return {erro:true};
+  if (sec >= 60 && (min||h)) return {erro:true};
+  const ms = Number((frac+'000').slice(0,3));
+  const total = h*3600 + min*60 + sec + ms/1000;
+  if (!(total > 0) || total > 3600) return {erro:true};
+  return {seg: Math.round(total*1000)/1000};
+}
+
+/* ---------- Estado / carga ---------- */
+function setEstado(tipo, txt){ $('dot').className = 'dot '+tipo; $('estadoTx').textContent = txt; }
+function hora(){ return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+function aplicarDados(d){
+  S.titulo = d.titulo || 'Natação';
+  S.provas = d.provas || [];
+  S.pontos = d.pontos || {individual:[],revezamento:[]};
+  // não sobrescreve linhas com salvamento em andamento
+  const locais = new Map(S.inscricoes.map(e=>[e.id,e]));
+  S.inscricoes = (d.inscricoes||[]).map(e => pend.get(e.id) ? (locais.get(e.id)||e) : e);
+  if (!S.provas.find(p=>p.id===S.provaSel)) S.provaSel = S.provas[0] && S.provas[0].id;
+  $('titulo').textContent = S.titulo;
+  document.title = S.titulo + ' · Natação';
+}
+async function carregar(silencioso){
+  try{
+    const r = await api('listar');
+    if (!r.ok) throw new Error(r.erro);
+    aplicarDados(r);
+    if (!DEMO && !pend.size) setEstado(ultimoErro?'erro':'', ultimoErro ? 'Há lançamento não salvo' : 'Planilha conectada · '+hora());
+    renderTudo(silencioso);
+  }catch(e){
+    if (!silencioso) setEstado('erro','Sem conexão com a planilha');
+    if (!S.provas.length && EDIT) abrirEntrada('Não consegui ler a planilha. Confira a URL e se o script foi implantado para "Qualquer pessoa".');
+    else if (!S.provas.length) setEstado('erro','Resultados indisponíveis no momento');
+  }
+}
+
+/* ---------- Salvamento ---------- */
+async function salvar(id, campos){
+  const e = S.inscricoes.find(x=>x.id===id); if(!e) return;
+  Object.assign(e, campos.local||{});
+  pend.set(id,(pend.get(id)||0)+1); estadoLinha[id]='salvando'; marcarLinha(id);
+  setEstado('salvando','Salvando…'); renderClassProva(); renderProvasLista();
+  try{
+    const r = await api('salvar', {id, ...campos.envio});
+    if (!r.ok){ if (r.erro==='codigo') sairEdicao('O código de edição mudou. Entre de novo para continuar lançando.'); throw new Error(r.erro); }
+    estadoLinha[id]='ok'; ultimoErro=null;
+  }catch(err){
+    estadoLinha[id]='erro'; ultimoErro = {id, campos};
+    toast('Não salvou na planilha ('+(err.message||'sem conexão')+').', ()=>salvar(id, campos));
+  }finally{
+    const n=(pend.get(id)||1)-1; n? pend.set(id,n) : pend.delete(id);
+    marcarLinha(id);
+    if (!pend.size) setEstado(ultimoErro?'erro':(DEMO?'demo':''), ultimoErro?'Há lançamento não salvo':(DEMO?'Demonstração':'Salvo · '+hora()));
+  }
+}
+function toast(msg, retry){
+  $('toastTx').textContent = msg; $('toast').hidden = false;
+  const b=$('toastBt'); b.hidden = !retry; b.onclick = ()=>{ $('toast').hidden=true; retry&&retry(); };
+  clearTimeout(toast.t); toast.t = setTimeout(()=>{ if(!retry) $('toast').hidden=true; }, retry?15000:3500);
+}
+
+/* ---------- Render: lançar ---------- */
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const provaAtual = () => S.provas.find(p=>p.id===S.provaSel);
+const daProva = id => S.inscricoes.filter(e=>e.provaId===id);
+function progresso(p){ const L=daProva(p.id); const f=L.filter(e=>typeof e.seg==='number'||e.situacao).length; return [f,L.length]; }
+
+function renderProvasLista(){
+  $('listaProvas').innerHTML = S.provas.map(p=>{ const [f,t]=progresso(p);
+    return `<li><button data-prova="${esc(p.id)}" aria-current="${p.id===S.provaSel}"><span class="n">${p.ordem}</span><span class="nome">${esc(p.nome)}</span><span class="prog ${f===t&&t?'cheio':''}">${f}/${t}</span></button></li>`; }).join('');
+  $('novoProva').innerHTML = S.provas.map(p=>`<option value="${esc(p.id)}" ${p.id===S.provaSel?'selected':''}>${p.ordem}. ${esc(p.nome)}</option>`).join('');
+  $('selProva').innerHTML = S.provas.map(p=>{ const [f,t]=progresso(p); return `<option value="${esc(p.id)}" ${p.id===S.provaSel?'selected':''}>${p.ordem}. ${esc(p.nome)} (${f}/${t})</option>`; }).join('');
+}
+function linhaHTML(e, i){
+  const rev = provaAtual()?.revezamento;
+  const sit = e.situacao||'';
+  return `<tr data-id="${esc(e.id)}">
+    <td class="c-n">${i+1}</td>
+    <td class="c-nome"><input class="campo nome" data-k="atleta" value="${esc(e.atleta)}" aria-label="${rev?'Equipe':'Atleta'}">${e.integrantes?`<span class="integr">${esc(e.integrantes)}</span>`:''}</td>
+    <td class="c-atl"><input class="campo" data-k="atletica" value="${esc(e.atletica)}" placeholder="Atlética" aria-label="Atlética"></td>
+    <td class="c-inst"><input class="campo" style="min-width:100px" data-k="inst" placeholder="Instituição" value="${esc(e.inst)}" aria-label="Instituição"></td>
+    <td class="c-tempo"><input class="campo tempo" data-k="tempo" inputmode="decimal" value="${esc(formatarTempo(e.seg))}" placeholder="—" aria-label="Tempo"></td>
+    <td class="c-sit"><span class="sit"><button type="button" data-sit="" aria-pressed="${sit===''}">Normal</button><button type="button" class="dq" data-sit="Desclassificado" aria-pressed="${sit==='Desclassificado'}">DESC</button><button type="button" class="wo" data-sit="W.O." aria-pressed="${sit==='W.O.'}">W.O.</button></span></td>
+    <td class="c-obs"><input class="campo" data-k="obs" value="${esc(e.obs)}" placeholder="Observação" aria-label="Observação"></td>
+    <td class="st c-st ${estadoLinha[e.id]||''}"></td>
+    <td class="c-rm"><button type="button" class="rm">Remover</button></td>
+  </tr>`;
+}
+function renderLancar(){
+  const p = provaAtual();
+  if (!p){ $('nomeProva').textContent='Nenhuma prova na planilha'; $('corpo').innerHTML=''; return; }
+  const L = daProva(p.id); const [f,t] = progresso(p);
+  $('nomeProva').textContent = p.nome;
+  $('infoProva').textContent = `${p.ordem}ª prova · ${t} ${p.revezamento?'equipes':'atletas'} · ${f} lançados`;
+  $('chipProva').textContent = p.revezamento ? 'Revezamento · pontos em dobro' : categoriaDaProva(p.nome);
+  $('chipProva').className = 'chip'+(p.revezamento?' rev':'');
+  $('thAtleta').textContent = p.revezamento ? 'Equipe' : 'Atleta';
+  $('corpo').innerHTML = L.length ? L.map(linhaHTML).join('') : `<tr><td colspan="9" class="vazio">Nenhum inscrito nesta prova.</td></tr>`;
+  renderClassProva();
+}
+function marcarLinha(id){
+  const tr = document.querySelector(`#corpo tr[data-id="${CSS.escape(id)}"]`); if(!tr) return;
+  tr.querySelector('.st').className = 'st c-st '+(estadoLinha[id]||'');
+  const e = S.inscricoes.find(x=>x.id===id); if(!e) return;
+  tr.querySelectorAll('.sit button').forEach(b=>b.setAttribute('aria-pressed', String((e.situacao||'')===b.dataset.sit)));
+}
+/* atualiza valores sem refazer a tabela (não atrapalha quem está digitando) */
+function sincronizarLancar(){
+  const p = provaAtual(); if(!p) return renderLancar();
+  const L = daProva(p.id), trs = [...document.querySelectorAll('#corpo tr[data-id]')];
+  if (trs.length !== L.length || trs.some((tr,i)=>tr.dataset.id!==L[i].id)) {
+    if (document.activeElement && $('corpo').contains(document.activeElement)) return; // espera terminar de digitar
+    return renderLancar();
+  }
+  L.forEach((e,i)=>{ const tr=trs[i];
+    tr.querySelectorAll('input[data-k]').forEach(inp=>{ if(inp===document.activeElement) return;
+      const v = inp.dataset.k==='tempo' ? formatarTempo(e.seg) : (e[inp.dataset.k]||''); if(inp.value!==v) { inp.value=v; inp.classList.remove('inv'); } });
+    marcarLinha(e.id); });
+  const [f,t] = progresso(p); $('infoProva').textContent = `${p.ordem}ª prova · ${t} ${p.revezamento?'equipes':'atletas'} · ${f} lançados`;
+  renderClassProva();
+}
+function linhasClassif(p){
+  const tab = p.revezamento ? S.pontos.revezamento : S.pontos.individual;
+  return classificarProva(daProva(p.id), tab);
+}
+function classHTML(rs){
+  if (!rs.length) return `<div class="vazio">Sem tempos lançados ainda.</div>`;
+  return rs.map(r=>{ const fora = r.pos===null;
+    const cls = fora ? 'fora'+(r.rotulo==='W.O.'?' wo':'') : (r.pos<=3?'p'+r.pos:'');
+    const sub = [r.e.atletica, r.e.inst].filter(Boolean).join(' · ') + (r.e.obs?` — ${r.e.obs}`:'');
+    return `<div class="lin"><div class="pos ${cls}">${esc(r.rotulo)}</div><div class="quem"><b>${esc(r.e.atleta)}</b><span>${esc(sub)}</span></div><div class="t">${esc(formatarTempo(r.e.seg))}</div><div class="pts">${r.pts}<small>pts</small></div></div>`; }).join('');
+}
+function renderClassProva(){ const p=provaAtual(); $('classProva').innerHTML = p ? classHTML(linhasClassif(p)) : ''; }
+
+/* ---------- Render: classificação e geral ---------- */
+const FILTROS = ['Geral','Feminino','Masculino'];
+function chips(el, atual, nome){ el.innerHTML = FILTROS.map(f=>`<button type="button" data-${nome}="${f}" aria-pressed="${f===atual}">${f==='Geral'?'Todas':f}</button>`).join(''); }
+function renderClassif(){
+  chips($('filtrosClassif'), S.filtroC, 'fc');
+  const ps = S.provas.filter(p => S.filtroC==='Geral' || categoriaDaProva(p.nome)===S.filtroC);
+  $('gridClassif').innerHTML = ps.map(p=>{ const [f,t]=progresso(p);
+    return `<div class="card classif"><h3>${esc(p.nome)}<small>${f}/${t} lançados</small></h3>${classHTML(linhasClassif(p))}</div>`; }).join('') || `<div class="vazio">Nenhuma prova nesta categoria.</div>`;
+}
+function renderGeral(){
+  chips($('filtrosGeral'), S.filtroG, 'fg');
+  const L = rankingGeral(S.provas, S.inscricoes, S.pontos, S.filtroG);
+  const NP = S.pontos.individual.length;
+  $('podio').innerHTML = L.filter(t=>t.pts>0).slice(0,3).map((t,i)=>`<div class="card p${t.pos<=3?t.pos:''}"><span class="lugar">${t.pos}º lugar</span><span class="eq">${esc(t.nome)}</span><span class="val">${t.pts}<small> pontos</small></span></div>`).join('');
+  $('cabGeral').innerHTML = `<tr><th>Pos.</th><th>Atlética / Instituição</th><th style="text-align:right">Pontos</th><th style="text-align:center">W.O.</th>${Array.from({length:NP},(_,i)=>`<th style="text-align:center">${i+1}º</th>`).join('')}</tr>`;
+  $('corpoGeral').innerHTML = L.map(t=>`<tr><td class="r">${t.pos}</td><td><b>${esc(t.nome)}</b></td><td class="p">${t.pts}</td><td class="c">${t.wo||'–'}</td>${t.col.map(c=>`<td class="c">${c||'–'}</td>`).join('')}</tr>`).join('') || `<tr><td class="vazio" colspan="${4+NP}">Sem resultados ainda.</td></tr>`;
+  $('notaGeral').textContent = `Pontos por posição (individual): ${S.pontos.individual.join(' · ')}. Revezamento: ${S.pontos.revezamento.join(' · ')}. Empate em pontos: menos W.O., depois mais 1º lugares, 2º lugares e assim por diante. Persistindo o empate, as atléticas dividem a posição (o regulamento prevê sorteio). Os valores vêm da aba "Pontuação" da planilha.`;
+}
+function renderTudo(silencioso){
+  renderProvasLista();
+  if (silencioso) sincronizarLancar(); else renderLancar();
+  if (S.vista==='classif') renderClassif();
+  if (S.vista==='geral') renderGeral();
+}
+function mostrarVista(v){
+  S.vista = v;
+  document.querySelectorAll('nav.abas button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.vista===v)));
+  ['lancar','classif','geral'].forEach(x=>$('v-'+x).hidden = x!==v);
+  if (v==='classif') renderClassif(); if (v==='geral') renderGeral();
+}
+
+/* ---------- Eventos ---------- */
+document.querySelector('nav.abas').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-vista]'); if(b) mostrarVista(b.dataset.vista); });
+$('listaProvas').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-prova]'); if(!b) return; S.provaSel=b.dataset.prova; LS.set('prova',S.provaSel); renderProvasLista(); renderLancar(); });
+$('selProva').addEventListener('change', ev=>{ S.provaSel=ev.target.value; LS.set('prova',S.provaSel); renderProvasLista(); renderLancar(); });
+$('filtrosClassif').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-fc]'); if(b){ S.filtroC=b.dataset.fc; renderClassif(); } });
+$('filtrosGeral').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-fg]'); if(b){ S.filtroG=b.dataset.fg; renderGeral(); } });
+
+function confirmarCampo(inp){
+  const tr = inp.closest('tr[data-id]'); if(!tr) return true;
+  const id = tr.dataset.id, e = S.inscricoes.find(x=>x.id===id), k = inp.dataset.k;
+  if (k==='tempo'){
+    const r = lerTempo(inp.value);
+    if (r.erro){ inp.classList.add('inv'); toast('Tempo inválido. Use 28,64 ou 1:05,32.'); return false; }
+    inp.classList.remove('inv');
+    const seg = r.vazio ? null : r.seg;
+    inp.value = formatarTempo(seg);
+    if (seg !== e.seg) salvar(id, {local:{seg}, envio:{seg: seg===null?'':seg}});
+    return true;
+  }
+  const v = inp.value.trim();
+  if (v !== (e[k]||'')){
+    if (k==='atleta' && !v){ inp.value = e.atleta; return true; }
+    salvar(id, {local:{[k]:v}, envio:{[k]:v}});
+  }
+  return true;
+}
+$('corpo').addEventListener('change', ev=>{ if(ev.target.matches('input[data-k]')) confirmarCampo(ev.target); });
+$('corpo').addEventListener('keydown', ev=>{
+  if (ev.key!=='Enter' || !ev.target.matches('input[data-k]')) return;
+  ev.preventDefault();
+  const inp = ev.target; if (!confirmarCampo(inp)) return;
+  const tr = inp.closest('tr'); const prox = tr.nextElementSibling;
+  const alvo = prox && prox.querySelector(`input[data-k="${inp.dataset.k}"]`);
+  if (alvo){ alvo.focus(); alvo.select(); } else inp.blur();
+});
+$('corpo').addEventListener('click', ev=>{
+  const b = ev.target.closest('button'); if(!b) return;
+  const tr = b.closest('tr[data-id]'); if(!tr) return; const id = tr.dataset.id;
+  if (b.dataset.sit !== undefined){
+    const e = S.inscricoes.find(x=>x.id===id); if ((e.situacao||'')===b.dataset.sit) return;
+    salvar(id, {local:{situacao:b.dataset.sit}, envio:{situacao:b.dataset.sit}});
+  } else if (b.classList.contains('rm')){
+    if (!b.classList.contains('conf')){ b.classList.add('conf'); b.textContent='Confirmar'; setTimeout(()=>{b.classList.remove('conf'); b.textContent='Remover';}, 4000); return; }
+    remover(id);
+  }
+});
+async function remover(id){
+  setEstado('salvando','Removendo…');
+  try{ const r = await api('remover',{id}); if(!r.ok) throw new Error(r.erro);
+    S.inscricoes = S.inscricoes.filter(e=>e.id!==id); renderLancar(); renderProvasLista(); toast('Inscrição removida.'); setEstado(DEMO?'demo':'', DEMO?'Demonstração':'Salvo · '+hora());
+  }catch(e){ toast('Não consegui remover ('+(e.message||'sem conexão')+').'); setEstado('erro','Sem conexão com a planilha'); }
+}
+$('formIncluir').addEventListener('submit', async ev=>{
+  ev.preventDefault(); const nome=$('novoNome').value.trim(); if(!nome) return;
+  const b=$('btIncluir'); b.disabled=true; setEstado('salvando','Incluindo…');
+  try{
+    const provaNova = $('novoProva').value || S.provaSel;
+    const r = await api('adicionar',{provaId:provaNova, atleta:nome, atletica:$('novoAtl').value.trim(), inst:$('novoInst').value.trim()});
+    if(!r.ok) throw new Error(r.erro);
+    $('novoNome').value=''; $('novoAtl').value=''; $('novoInst').value='';
+    S.provaSel = provaNova; LS.set('prova',S.provaSel);
+    await carregar(false); toast('Atleta incluído.');
+  }catch(e){ toast('Não consegui incluir ('+(e.message||'sem conexão')+').'); setEstado('erro','Sem conexão com a planilha'); }
+  finally{ b.disabled=false; }
+});
+
+/* ---------- Entrada e modos (edição x visualização) ---------- */
+let EDIT = !!LS.get('codigo','');
+function aplicarModo(){
+  $('abaLancar').hidden = !EDIT;
+  $('btEdicao').hidden = DEMO || !URL_API;
+  $('btEdicao').textContent = EDIT ? 'Sair da edição' : 'Editar';
+  if (!EDIT && S.vista==='lancar') mostrarVista('geral');
+}
+function abrirEntrada(msg){
+  $('entrada').hidden=false; ['lancar','classif','geral'].forEach(x=>$('v-'+x).hidden=true);
+  document.querySelector('nav.abas').hidden = true;
+  const temUrl = !!URL_API;
+  $('lblUrl').hidden = !!SCRIPT_URL; $('inUrl').value = URL_API || ''; $('inCod').value = '';
+  $('entTit').textContent = temUrl ? 'Entrar no modo edição' : 'Conectar à planilha';
+  $('entTx').textContent = temUrl ? 'Digite o código de edição para lançar tempos, incluir atletas e corrigir resultados. Quem só acompanha não precisa de código.'
+                                  : 'Cole a URL do App da Web do Apps Script (termina em /exec) e o código de edição definido no script.';
+  $('btCancelar').hidden = !temUrl; $('btDemo').hidden = temUrl;
+  $('errEnt').textContent = msg||'';
+  setTimeout(()=>$(temUrl&&SCRIPT_URL?'inCod':'inUrl').focus(), 50);
+}
+function fecharEntrada(){ $('entrada').hidden=true; document.querySelector('nav.abas').hidden=false; aplicarModo(); mostrarVista(S.vista); }
+function sairEdicao(msg){ EDIT=false; LS.set('codigo',''); aplicarModo(); if(msg) toast(msg); }
+$('btEdicao').addEventListener('click', ()=>{ if (EDIT) { sairEdicao('Modo visualização.'); } else abrirEntrada(); });
+$('btCancelar').addEventListener('click', ()=>{ fecharEntrada(); });
+$('inCod').addEventListener('keydown', ev=>{ if(ev.key==='Enter') $('btEntrar').click(); });
+$('btEntrar').addEventListener('click', async ()=>{
+  const url = SCRIPT_URL || $('inUrl').value.trim(), cod = $('inCod').value.trim();
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url) && !/^http:\/\/localhost/.test(url)){ $('errEnt').textContent='A URL deve começar com https://script.google.com/macros/s/ e terminar em /exec.'; return; }
+  if (!cod){ $('errEnt').textContent='Digite o código de edição.'; return; }
+  const urlAntes = URL_API; URL_API = url; DEMO=false; $('bannerDemo').hidden=true;
+  $('btEntrar').disabled=true; $('errEnt').textContent='Conectando…';
+  try{
+    const u = new URL(url); u.searchParams.set('acao','verificar'); u.searchParams.set('codigo',cod);
+    const r = await (await fetch(u.toString())).json();
+    if(!r.ok){ URL_API = urlAntes; $('errEnt').textContent = r.erro==='codigo'?'Código de edição incorreto.':'Erro: '+r.erro; return; }
+    LS.set('url',url); LS.set('codigo',cod); EDIT=true;
+    fecharEntrada(); mostrarVista('lancar'); await carregar(false);
+  }catch(e){ URL_API = urlAntes; $('errEnt').textContent='Não consegui falar com o script. Confira a URL e se a implantação está como "Qualquer pessoa".'; }
+  finally{ $('btEntrar').disabled=false; }
+});
+$('btDemo').addEventListener('click', ()=>{ iniciarDemo(); });
+function iniciarDemo(){
+  DEMO=true; EDIT=true; DEMO_STATE = JSON.parse(JSON.stringify(DEMO_DATA)); $('bannerDemo').hidden=false;
+  setEstado('demo','Demonstração'); fecharEntrada(); mostrarVista('lancar'); carregar(false);
+}
+
+/* ---------- Início ---------- */
+if (URL_API) { mostrarVista(EDIT ? 'lancar' : 'geral'); aplicarModo(); carregar(false); }
+else { abrirEntrada(); }
+setInterval(()=>{ if (!DEMO && URL_API && !pend.size && $('entrada').hidden && document.visibilityState==='visible') carregar(true); }, ATUALIZAR_A_CADA_MS);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !DEMO && URL_API && $('entrada').hidden) carregar(true); });
+</script>
+</body>
+</html>
