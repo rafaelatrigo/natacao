@@ -148,6 +148,16 @@ tr:last-child td{border-bottom:0}
 .geral td.p{font:700 18px var(--fonte-disp);text-align:right}
 .geral td.r{font:700 18px var(--fonte-disp);width:48px;text-align:center}
 .nota{font-size:12px;color:var(--tx2);max-width:72ch}
+.regras{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+.regras h3{font:700 19px var(--fonte-disp);text-transform:uppercase;letter-spacing:.02em}
+.bloco-pontos{padding:16px;display:grid;gap:10px}
+.tab-pontos td{text-align:center;font:700 18px var(--fonte-disp)} .tab-pontos th{text-align:center}
+.tab-pontos td:first-child{color:var(--tx2)}
+.tab-pontos tr.p1 td:first-child{color:var(--ouro)} .tab-pontos tr.p2 td:first-child{color:var(--prata)} .tab-pontos tr.p3 td:first-child{color:var(--bronze)}
+.regras-txt{display:grid;gap:12px;min-width:0}
+.regra{padding:14px 16px;display:grid;gap:8px}
+.regra ul{display:grid;gap:6px;padding-left:18px;max-width:75ch}
+@media (max-width:860px){ .regras{grid-template-columns:minmax(0,1fr)} }
 
 /* --- Entrada / avisos --- */
 .entrada{max-width:440px;margin:40px auto;display:grid;gap:14px}
@@ -195,6 +205,7 @@ tr:last-child td{border-bottom:0}
     <button role="tab" data-vista="lancar" aria-selected="true" id="abaLancar">Lançar tempos</button>
     <button role="tab" data-vista="classif" aria-selected="false">Classificação</button>
     <button role="tab" data-vista="geral" aria-selected="false">Ranking geral</button>
+    <button role="tab" data-vista="regras" aria-selected="false">Regras</button>
   </nav>
 </header>
 
@@ -255,6 +266,35 @@ tr:last-child td{border-bottom:0}
       <table class="geral"><thead id="cabGeral"></thead><tbody id="corpoGeral"></tbody></table>
     </div>
     <p class="nota" id="notaGeral"></p>
+  </section>
+
+  <section class="vista" id="v-regras" hidden>
+    <div class="regras">
+      <div class="card bloco-pontos">
+        <h3>Pontos por colocação</h3>
+        <p class="nota">Vale para cada prova. Só pontua quem termina até a última posição da tabela.</p>
+        <div class="tabela-wrap"><table class="tab-pontos"><thead><tr><th>Posição</th><th>Individual</th><th>Revezamento</th></tr></thead><tbody id="corpoPontos"></tbody></table></div>
+      </div>
+      <div class="regras-txt">
+        <div class="card regra"><h3>Classificação da prova</h3><ul>
+          <li>Vence o menor tempo. Os tempos são registrados em minutos, segundos e milésimos.</li>
+          <li>Empate: os atletas dividem a mesma colocação e recebem os pontos dela. A colocação seguinte é pulada (ex.: dois em 2º, o próximo é 4º).</li>
+          <li id="regraRevez"></li>
+        </ul></div>
+        <div class="card regra"><h3>Desclassificação e W.O.</h3><ul>
+          <li><b>DESC</b> (desclassificado): aparece no fim da lista, com 0 ponto, e não ocupa colocação. Quem vinha atrás sobe.</li>
+          <li><b>W.O.</b> (ausente): mesma regra do DESC, e ainda conta 1 W.O. para a atlética no desempate do ranking geral.</li>
+          <li>Atleta sem tempo e sem marcação ainda não nadou e não aparece na classificação.</li>
+        </ul></div>
+        <div class="card regra"><h3>Ranking geral das atléticas</h3><ul>
+          <li>Soma dos pontos de todos os atletas e equipes da atlética em todas as provas.</li>
+          <li>Desempate, nesta ordem: 1) menos W.O.; 2) mais 1º lugares; 3) mais 2º lugares, e assim até a última posição que pontua.</li>
+          <li>Persistindo o empate, as atléticas dividem a posição. O regulamento prevê sorteio, feito pela organização.</li>
+          <li>Os filtros Feminino e Masculino somam só as provas daquela categoria. Revezamentos mistos entram apenas em "Todas".</li>
+        </ul></div>
+        <p class="nota" id="regrasFonte"></p>
+      </div>
+    </div>
   </section>
 </main>
 <div class="toast" id="toast" hidden><span id="toastTx"></span><button id="toastBt" hidden>Tentar de novo</button></div>
@@ -542,17 +582,25 @@ function renderGeral(){
   $('corpoGeral').innerHTML = L.map(t=>`<tr><td class="r">${t.pos}</td><td><b>${esc(t.nome)}</b></td><td class="p">${t.pts}</td><td class="c">${t.wo||'–'}</td>${t.col.map(c=>`<td class="c">${c||'–'}</td>`).join('')}</tr>`).join('') || `<tr><td class="vazio" colspan="${4+NP}">Sem resultados ainda.</td></tr>`;
   $('notaGeral').textContent = `Pontos por posição (individual): ${S.pontos.individual.join(' · ')}. Revezamento: ${S.pontos.revezamento.join(' · ')}. Empate em pontos: menos W.O., depois mais 1º lugares, 2º lugares e assim por diante. Persistindo o empate, as atléticas dividem a posição (o regulamento prevê sorteio). Os valores vêm da aba "Pontuação" da planilha.`;
 }
+function renderRegras(){
+  const I = S.pontos.individual, R = S.pontos.revezamento;
+  $('corpoPontos').innerHTML = I.map((v,i)=>`<tr class="${i<3?'p'+(i+1):''}"><td>${i+1}º</td><td>${v}</td><td>${R[i] ?? '–'}</td></tr>`).join('') || `<tr><td colspan="3" class="vazio">Tabela ainda não carregada.</td></tr>`;
+  const dobro = I.length && I.every((v,i)=>R[i]===v*2);
+  $('regraRevez').textContent = dobro ? 'Revezamentos valem o dobro dos pontos da prova individual.' : 'Revezamentos têm pontuação própria, mostrada na tabela ao lado.';
+  $('regrasFonte').textContent = `Pontuam as ${I.length} primeiras colocações. Os valores vêm da aba "Pontuação" da planilha oficial da competição e são atualizados aqui automaticamente.`;
+}
 function renderTudo(silencioso){
   renderProvasLista();
   if (silencioso) sincronizarLancar(); else renderLancar();
   if (S.vista==='classif') renderClassif();
   if (S.vista==='geral') renderGeral();
+  if (S.vista==='regras') renderRegras();
 }
 function mostrarVista(v){
   S.vista = v;
   document.querySelectorAll('nav.abas button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.vista===v)));
-  ['lancar','classif','geral'].forEach(x=>$('v-'+x).hidden = x!==v);
-  if (v==='classif') renderClassif(); if (v==='geral') renderGeral();
+  ['lancar','classif','geral','regras'].forEach(x=>$('v-'+x).hidden = x!==v);
+  if (v==='classif') renderClassif(); if (v==='geral') renderGeral(); if (v==='regras') renderRegras();
 }
 
 /* ---------- Eventos ---------- */
@@ -634,7 +682,7 @@ function aplicarModo(){
   if (!EDIT && S.vista==='lancar') mostrarVista('geral');
 }
 function abrirEntrada(msg){
-  $('entrada').hidden=false; ['lancar','classif','geral'].forEach(x=>$('v-'+x).hidden=true);
+  $('entrada').hidden=false; ['lancar','classif','geral','regras'].forEach(x=>$('v-'+x).hidden=true);
   document.querySelector('nav.abas').hidden = true;
   const temUrl = !!URL_API;
   $('lblUrl').hidden = !!SCRIPT_URL; $('inUrl').value = URL_API || ''; $('inCod').value = '';
