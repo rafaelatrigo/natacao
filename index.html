@@ -40,7 +40,7 @@
   --acento:#F4AE45; --acento-tx:#2B1C00; --ok:#45C08A; --erro:#F07A64; --aviso:#E2A84A; color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
-html,body{background:var(--bg);color:var(--tx);font:14px/1.45 var(--fonte);-webkit-font-smoothing:antialiased}
+html,body{background:var(--bg);color:var(--tx);font:13px/1.45 var(--fonte);-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none}
 :focus-visible{outline:2px solid var(--acento);outline-offset:2px}
@@ -52,7 +52,7 @@ header::after{content:"";display:block;height:4px;margin:0 calc(-1*max(16px,env(
   background:repeating-linear-gradient(90deg,#D94A3A 0 18px,#fff 18px 36px,#2D6FD6 36px 54px,#fff 54px 72px);opacity:.85}
 .top{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .marca{display:flex;align-items:baseline;gap:10px;min-width:0}
-.marca h1{font:700 26px/1 var(--fonte-disp);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.marca h1{font:700 22px/1 var(--fonte-disp);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .marca small{font-size:12px;color:#A9C6D4;letter-spacing:.08em;text-transform:uppercase}
 .acoes-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .bt-edicao{font-size:12px;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.35);padding:5px 12px;border-radius:999px}
@@ -61,7 +61,7 @@ header::after{content:"";display:block;height:4px;margin:0 calc(-1*max(16px,env(
 .dot{width:8px;height:8px;border-radius:50%;background:#7FE0AE}
 .dot.salvando{background:var(--acento)} .dot.erro{background:#FF8A75} .dot.demo{background:#B9A6FF}
 nav.abas{max-width:1280px;margin:12px auto 0;display:flex;gap:4px;overflow-x:auto}
-nav.abas button{font:600 16px var(--fonte-disp);letter-spacing:.06em;text-transform:uppercase;color:#B7D0DC;padding:8px 14px 10px;border-radius:8px 8px 0 0;white-space:nowrap}
+nav.abas button{font:600 14px var(--fonte-disp);letter-spacing:.06em;text-transform:uppercase;color:#B7D0DC;padding:8px 14px 10px;border-radius:8px 8px 0 0;white-space:nowrap}
 nav.abas button[aria-selected="true"]{background:var(--bg);color:var(--tx)}
 
 main{max-width:1280px;margin:0 auto;padding-block:18px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -76,14 +76,14 @@ main{max-width:1280px;margin:0 auto;padding-block:18px 60px;padding-left:max(16p
 .provas li button{width:100%;text-align:left;display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:9px 14px;border-top:1px solid var(--linha)}
 .provas li button:hover{background:var(--raia)}
 .provas li button[aria-current="true"]{background:var(--raia);box-shadow:inset 3px 0 0 var(--acento)}
-.provas .n{font:600 15px var(--fonte-disp);color:var(--tx2)}
+.provas .n{font:600 13px var(--fonte-disp);color:var(--tx2)}
 .provas .nome{font-weight:500;line-height:1.25}
 .provas .prog{font-size:11px;color:var(--tx2)} .provas .prog.cheio{color:var(--ok);font-weight:600}
 .sel-prova{display:none}
 
 .painel{display:grid;gap:18px;min-width:0}
 .cab-prova{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:10px}
-.cab-prova h2{font:700 30px/1.05 var(--fonte-disp);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+.cab-prova h2{font:700 24px/1.05 var(--fonte-disp);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
 .cab-prova p{color:var(--tx2);font-size:13px}
 .chip{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--raia);color:var(--tx2)}
 .chip.rev{background:var(--acento);color:var(--acento-tx)}
@@ -92,18 +92,18 @@ main{max-width:1280px;margin:0 auto;padding-block:18px 60px;padding-left:max(16p
 .tabela-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
 th{font:600 11px var(--fonte);letter-spacing:.07em;text-transform:uppercase;color:var(--tx2);text-align:left;padding:10px 8px;border-bottom:1px solid var(--linha);white-space:nowrap}
-td{padding:6px 8px;border-bottom:1px solid var(--linha);vertical-align:middle}
+td{padding:3px 8px;border-bottom:1px solid var(--linha);vertical-align:middle}
 tr:last-child td{border-bottom:0}
 .lanc td:first-child{color:var(--tx2);width:34px;text-align:center}
-.campo{width:100%;min-width:90px;border:1px solid transparent;background:transparent;border-radius:6px;padding:6px 7px}
+.campo{width:100%;min-width:90px;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 7px}
 .campo:hover{border-color:var(--linha)} .campo:focus{border-color:var(--agua-2);background:var(--bg);outline:none}
 .campo.nome{min-width:270px;font-weight:500}
 .campo.tempo::placeholder{color:var(--tx2);opacity:.6}
-.campo.tempo{width:112px;min-width:112px;font-family:var(--fonte-num);font-size:15px;text-align:right;border-color:var(--linha);background:var(--bg)}
+.campo.tempo{width:112px;min-width:112px;font-family:var(--fonte-num);font-size:14px;text-align:right;border-color:var(--linha);background:var(--bg)}
 .campo.tempo.inv{border-color:var(--erro);background:color-mix(in srgb,var(--erro) 10%,var(--bg))}
 .integr{display:block;font-size:11px;color:var(--tx2);padding:0 7px 4px;max-width:340px}
 .sit{display:inline-flex;border:1px solid var(--linha);border-radius:8px;overflow:hidden}
-.sit button{font-size:12px;font-weight:600;padding:6px 9px;color:var(--tx2);white-space:nowrap}
+.sit button{font-size:11px;font-weight:600;padding:5px 8px;color:var(--tx2);white-space:nowrap}
 .sit button+button{border-left:1px solid var(--linha)}
 .sit button[aria-pressed="true"]{background:var(--agua-2);color:#fff}
 .sit button.dq[aria-pressed="true"]{background:var(--erro)} .sit button.wo[aria-pressed="true"]{background:var(--aviso)}
@@ -122,36 +122,36 @@ tr:last-child td{border-bottom:0}
 /* --- Classificação --- */
 .classif .lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto 56px;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--linha)}
 .classif .lin:first-child{border-top:0}
-.pos{font:700 22px/1 var(--fonte-disp);text-align:center;color:var(--tx2)}
+.pos{font:700 18px/1 var(--fonte-disp);text-align:center;color:var(--tx2)}
 .pos.p1{color:var(--ouro)} .pos.p2{color:var(--prata)} .pos.p3{color:var(--bronze)}
 .pos.fora{font-size:14px;letter-spacing:.04em;color:var(--erro)} .pos.fora.wo{color:var(--aviso)}
 .quem b{font-weight:600;display:block;overflow-wrap:anywhere} .quem span{font-size:12px;color:var(--tx2)}
-.t{font-family:var(--fonte-num);font-size:15px;text-align:right}
-.pts{font:700 20px/1 var(--fonte-disp);text-align:right} .pts small{font:500 11px var(--fonte);color:var(--tx2);margin-left:2px}
+.t{font-family:var(--fonte-num);font-size:13px;text-align:right}
+.pts{font:700 16px/1 var(--fonte-disp);text-align:right} .pts small{font:500 11px var(--fonte);color:var(--tx2);margin-left:2px}
 .vazio{padding:22px 16px;color:var(--tx2);text-align:center}
 .secao{display:grid;gap:12px}
 .filtros{display:flex;gap:6px;flex-wrap:wrap}
 .filtros button{font-weight:600;font-size:13px;padding:7px 12px;border-radius:999px;border:1px solid var(--linha);background:var(--card);color:var(--tx2)}
 .filtros button[aria-pressed="true"]{background:var(--agua-2);border-color:var(--agua-2);color:#fff}
 .grid-classif{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:16px}
-.grid-classif .card h3{font:700 19px var(--fonte-disp);text-transform:uppercase;padding:12px 14px 4px;display:flex;justify-content:space-between;gap:8px}
+.grid-classif .card h3{font:700 16px var(--fonte-disp);text-transform:uppercase;padding:12px 14px 4px;display:flex;justify-content:space-between;gap:8px}
 .grid-classif .card h3 small{font:500 12px var(--fonte);color:var(--tx2);text-transform:none}
 
 /* --- Ranking geral --- */
 .podio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.podio .card{padding:16px;display:grid;gap:4px}
+.podio .card{padding:12px 14px;display:grid;gap:4px}
 .podio .lugar{font:700 14px var(--fonte-disp);letter-spacing:.1em;text-transform:uppercase}
 .podio .p1 .lugar{color:var(--ouro)} .podio .p2 .lugar{color:var(--prata)} .podio .p3 .lugar{color:var(--bronze)}
-.podio .eq{font:700 24px/1.1 var(--fonte-disp);text-transform:uppercase;overflow-wrap:anywhere}
-.podio .val{font:700 34px/1 var(--fonte-disp)} .podio .val small{font:500 13px var(--fonte);color:var(--tx2)}
+.podio .eq{font:700 19px/1.1 var(--fonte-disp);text-transform:uppercase;overflow-wrap:anywhere}
+.podio .val{font:700 26px/1 var(--fonte-disp)} .podio .val small{font:500 13px var(--fonte);color:var(--tx2)}
 .geral td.c{text-align:center;font-family:var(--fonte-num);color:var(--tx2)}
-.geral td.p{font:700 18px var(--fonte-disp);text-align:right}
-.geral td.r{font:700 18px var(--fonte-disp);width:48px;text-align:center}
+.geral td.p{font:700 15px var(--fonte-disp);text-align:right}
+.geral td.r{font:700 15px var(--fonte-disp);width:48px;text-align:center}
 .nota{font-size:12px;color:var(--tx2);max-width:72ch}
 .regras{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
-.regras h3{font:700 19px var(--fonte-disp);text-transform:uppercase;letter-spacing:.02em}
+.regras h3{font:700 16px var(--fonte-disp);text-transform:uppercase;letter-spacing:.02em}
 .bloco-pontos{padding:16px;display:grid;gap:10px}
-.tab-pontos td{text-align:center;font:700 18px var(--fonte-disp)} .tab-pontos th{text-align:center}
+.tab-pontos td{text-align:center;font:700 15px var(--fonte-disp)} .tab-pontos th{text-align:center}
 .tab-pontos td:first-child{color:var(--tx2)}
 .tab-pontos tr.p1 td:first-child{color:var(--ouro)} .tab-pontos tr.p2 td:first-child{color:var(--prata)} .tab-pontos tr.p3 td:first-child{color:var(--bronze)}
 .regras-txt{display:grid;gap:12px;min-width:0}
@@ -161,7 +161,7 @@ tr:last-child td{border-bottom:0}
 
 /* --- Entrada / avisos --- */
 .entrada{max-width:440px;margin:40px auto;display:grid;gap:14px}
-.entrada h2{font:700 28px var(--fonte-disp);text-transform:uppercase}
+.entrada h2{font:700 24px var(--fonte-disp);text-transform:uppercase}
 .entrada label{display:grid;gap:6px;font-weight:600;font-size:13px}
 .entrada input{border:1px solid var(--linha);border-radius:8px;padding:10px 12px;background:var(--card);font-weight:400}
 .erro-msg{color:var(--erro);font-size:13px;min-height:1em}
@@ -174,7 +174,7 @@ tr:last-child td{border-bottom:0}
   .provas{display:none}
   .sel-prova{display:block;width:100%;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--card);font-weight:600}
   .podio{grid-template-columns:minmax(0,1fr)}
-  .cab-prova h2{font-size:24px}
+  .cab-prova h2{font-size:20px}
   .marca small{display:none}
   .marca h1{font-size:22px}
 }
@@ -578,9 +578,9 @@ function renderGeral(){
   const L = rankingGeral(S.provas, S.inscricoes, S.pontos, S.filtroG);
   const NP = S.pontos.individual.length;
   $('podio').innerHTML = L.filter(t=>t.pts>0).slice(0,3).map((t,i)=>`<div class="card p${t.pos<=3?t.pos:''}"><span class="lugar">${t.pos}º lugar</span><span class="eq">${esc(t.nome)}</span><span class="val">${t.pts}<small> pontos</small></span></div>`).join('');
-  $('cabGeral').innerHTML = `<tr><th>Pos.</th><th>Atlética / Instituição</th><th style="text-align:right">Pontos</th><th style="text-align:center">W.O.</th>${Array.from({length:NP},(_,i)=>`<th style="text-align:center">${i+1}º</th>`).join('')}</tr>`;
-  $('corpoGeral').innerHTML = L.map(t=>`<tr><td class="r">${t.pos}</td><td><b>${esc(t.nome)}</b></td><td class="p">${t.pts}</td><td class="c">${t.wo||'–'}</td>${t.col.map(c=>`<td class="c">${c||'–'}</td>`).join('')}</tr>`).join('') || `<tr><td class="vazio" colspan="${4+NP}">Sem resultados ainda.</td></tr>`;
-  $('notaGeral').textContent = `Pontos por posição (individual): ${S.pontos.individual.join(' · ')}. Revezamento: ${S.pontos.revezamento.join(' · ')}. Empate em pontos: menos W.O., depois mais 1º lugares, 2º lugares e assim por diante. Persistindo o empate, as atléticas dividem a posição (o regulamento prevê sorteio). Os valores vêm da aba "Pontuação" da planilha.`;
+  $('cabGeral').innerHTML = `<tr><th>Pos.</th><th>Atlética / Instituição</th><th style="text-align:right">Pontos</th></tr>`;
+  $('corpoGeral').innerHTML = L.map(t=>`<tr><td class="r">${t.pos}</td><td><b>${esc(t.nome)}</b></td><td class="p">${t.pts}</td></tr>`).join('') || `<tr><td class="vazio" colspan="3">Sem resultados ainda.</td></tr>`;
+  $('notaGeral').textContent = 'Critérios de pontuação e desempate na aba Regras.';
 }
 function renderRegras(){
   const I = S.pontos.individual, R = S.pontos.revezamento;
