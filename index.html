@@ -162,6 +162,12 @@ tr:last-child td{border-bottom:0}
 .tab-pontos td{text-align:center;font:700 15px var(--fonte-disp)} .tab-pontos th{text-align:center}
 .tab-pontos td:first-child{color:var(--tx2)}
 .tab-pontos tr.p1 td:first-child{color:var(--ouro)} .tab-pontos tr.p2 td:first-child{color:var(--prata)} .tab-pontos tr.p3 td:first-child{color:var(--bronze)}
+.edit-pontos{display:grid;gap:10px;border-top:1px dashed var(--linha);padding-top:12px}
+.ep-linha{display:flex;gap:8px;flex-wrap:wrap}
+.ep-dobro{display:flex;gap:8px;align-items:center;font-size:13px}
+.ep-dobro input{width:18px;height:18px}
+.tab-pontos input{width:72px;text-align:center;font:700 15px var(--fonte-disp);padding:6px;border:1px solid var(--linha);border-radius:8px;background:var(--bg);color:inherit}
+.tab-pontos input:disabled{opacity:.6}
 .regras-txt{display:grid;gap:12px;min-width:0}
 .regra{padding:14px 16px;display:grid;gap:8px}
 .regra ul{display:grid;gap:6px;padding-left:18px;max-width:75ch}
@@ -188,10 +194,10 @@ tr:last-child td{border-bottom:0}
 }
 @media (max-width:860px){
   .lanc thead{display:none}
-  .lanc tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"nome nome" "atl inst" "tempo tempo" "sit sit" "obs obs" "st rm";gap:6px 8px;padding:12px;border-bottom:1px solid var(--linha)}
+  .lanc tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"n n" "nome nome" "atl inst" "tempo tempo" "sit sit" "obs obs" "st rm";gap:6px 8px;padding:12px;border-bottom:1px solid var(--linha)}
   .lanc tbody tr:last-child{border-bottom:0}
   .lanc tbody td{border:0;padding:0;width:auto!important;text-align:left!important}
-  .lanc td.c-n{display:none} .lanc td.c-nome{grid-area:nome} .lanc td.c-atl{grid-area:atl} .lanc td.c-inst{grid-area:inst}
+  .lanc td.c-n{grid-area:n;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--tx2)} .lanc td.c-nome{grid-area:nome} .lanc td.c-atl{grid-area:atl} .lanc td.c-inst{grid-area:inst}
   .lanc td.c-tempo{grid-area:tempo} .lanc td.c-sit{grid-area:sit} .lanc td.c-obs{grid-area:obs} .lanc td.c-st{grid-area:st;align-self:center} .lanc td.c-rm{grid-area:rm;justify-self:end}
   .campo,.campo.nome,.campo.tempo{min-width:0!important;width:100%;font-size:16px}
   .campo{border-color:var(--linha)} .campo.nome{font-weight:600}
@@ -241,7 +247,7 @@ tr:last-child td{border-bottom:0}
         <div class="card">
           <div class="tabela-wrap">
             <table class="lanc">
-              <thead><tr><th>#</th><th id="thAtleta">Atleta</th><th>Atlética</th><th>Instituição</th><th style="text-align:right">Tempo</th><th>Situação</th><th>Observação</th><th></th><th></th></tr></thead>
+              <thead><tr><th>Baliza</th><th id="thAtleta">Atleta</th><th>Atlética</th><th>Instituição</th><th style="text-align:right">Tempo</th><th>Situação</th><th>Observação</th><th></th><th></th></tr></thead>
               <tbody id="corpo"></tbody>
             </table>
           </div>
@@ -284,6 +290,12 @@ tr:last-child td{border-bottom:0}
         <h3>Pontos por colocação</h3>
         <p class="nota">Vale para cada prova. Só pontua quem termina até a última posição da tabela.</p>
         <div class="tabela-wrap"><table class="tab-pontos"><thead><tr><th>Posição</th><th>Individual</th><th>Revezamento</th></tr></thead><tbody id="corpoPontos"></tbody></table></div>
+        <div class="edit-pontos" id="editPontos" hidden>
+          <div class="ep-linha"><button type="button" class="btn claro" id="btPosMais">+ posição</button><button type="button" class="btn claro" id="btPosMenos">− posição</button></div>
+          <label class="ep-dobro"><input type="checkbox" id="chkDobro"> Revezamento vale o dobro (calcula sozinho)</label>
+          <div class="ep-linha"><button type="button" class="btn" id="btSalvarPontos">Salvar pontuação</button><button type="button" class="btn claro" id="btDescartarPontos">Descartar</button></div>
+          <p class="nota" id="msgPontos">Só você vê estes campos. Ao salvar, o ranking é recalculado na hora para todos.</p>
+        </div>
       </div>
       <div class="regras-txt">
         <div class="card regra"><h3>Classificação da prova</h3><ul>
@@ -402,6 +414,7 @@ function demoApi(acao, p){
     if('seg' in p) e.seg = p.seg===''?null:Number(p.seg); ['situacao','obs','atleta','atletica','inst'].forEach(k=>{if(k in p) e[k]=p[k]}); return Promise.resolve({ok:true}); }
   if (acao==='adicionar'){ const id = String(Math.max(0,...DEMO_STATE.inscricoes.map(e=>+e.id))+1);
     DEMO_STATE.inscricoes.push({id, provaId:p.provaId, atleta:p.atleta, atletica:p.atletica||'', inst:p.inst||'', integrantes:'', seg:null, situacao:'', obs:'Incluído na página', ordem:DEMO_STATE.inscricoes.length+1}); return Promise.resolve({ok:true,id}); }
+  if (acao==='pontos'){ const I=p.ind.split(',').map(Number); DEMO_STATE.pontos={individual:I, revezamento: p.dobro==='1'?I.map(v=>v*2):p.rev.split(',').map(Number)}; return Promise.resolve({ok:true,pontos:DEMO_STATE.pontos}); }
   if (acao==='remover'){ DEMO_STATE.inscricoes = DEMO_STATE.inscricoes.filter(e=>e.id!==p.id); return Promise.resolve({ok:true}); }
 }
 let DEMO_STATE = null;
@@ -518,9 +531,9 @@ function linhaHTML(e, i){
   const rev = provaAtual()?.revezamento;
   const sit = e.situacao||'';
   return `<tr data-id="${esc(e.id)}">
-    <td class="c-n">${i+1}</td>
+    <td class="c-n" style="white-space:nowrap">${esc(e.baliza||String(i+1))}</td>
     <td class="c-nome"><input class="campo nome" data-k="atleta" value="${esc(e.atleta)}" aria-label="${rev?'Equipe':'Atleta'}">${e.integrantes?`<span class="integr">${esc(e.integrantes)}</span>`:''}</td>
-    <td class="c-atl"><input class="campo" data-k="atletica" value="${esc(e.atletica)}" placeholder="Atlética" aria-label="Atlética"></td>
+    <td class="c-atl"><input class="campo" style="min-width:140px" data-k="atletica" value="${esc(e.atletica)}" placeholder="Atlética" aria-label="Atlética"></td>
     <td class="c-inst"><input class="campo" style="min-width:100px" data-k="inst" placeholder="Instituição" value="${esc(e.inst)}" aria-label="Instituição"></td>
     <td class="c-tempo"><input class="campo tempo" data-k="tempo" inputmode="numeric" autocomplete="off" maxlength="9" value="${esc(campoTempo(e.seg))}" placeholder="00:00,000" aria-label="Tempo (digite só os números)"></td>
     <td class="c-sit"><span class="sit"><button type="button" data-sit="" aria-pressed="${sit===''}">Normal</button><button type="button" class="dq" data-sit="Desclassificado" aria-pressed="${sit==='Desclassificado'}">DESC</button><button type="button" class="wo" data-sit="W.O." aria-pressed="${sit==='W.O.'}">W.O.</button></span></td>
@@ -596,19 +609,51 @@ function renderGeral(){
   $('corpoGeral').innerHTML = L.map(t=>`<tr><td class="r">${t.pos}</td><td><b>${esc(t.nome)}</b></td><td class="p">${t.pts}</td></tr>`).join('') || `<tr><td class="vazio" colspan="3">Sem resultados ainda.</td></tr>`;
   $('notaGeral').textContent = 'Critérios de pontuação e desempate na aba Regras.';
 }
+let PE = null;   // rascunho da pontuação em edição: {ind:[], rev:[], dobro:bool}
 function renderRegras(){
   const I = S.pontos.individual, R = S.pontos.revezamento;
-  $('corpoPontos').innerHTML = I.map((v,i)=>`<tr class="${i<3?'p'+(i+1):''}"><td>${i+1}º</td><td>${v}</td><td>${R[i] ?? '–'}</td></tr>`).join('') || `<tr><td colspan="3" class="vazio">Tabela ainda não carregada.</td></tr>`;
   const dobro = I.length && I.every((v,i)=>R[i]===v*2);
+  $('editPontos').hidden = !EDIT;
+  if (EDIT){
+    if (!PE) PE = {ind:I.slice(), rev:R.slice(), dobro: !!dobro || !I.length};
+    $('chkDobro').checked = PE.dobro;
+    $('corpoPontos').innerHTML = PE.ind.map((v,i)=>`<tr class="${i<3?'p'+(i+1):''}"><td>${i+1}º</td><td><input data-pi="${i}" data-t="ind" inputmode="numeric" value="${v}" aria-label="Pontos individual ${i+1}º"></td><td><input data-pi="${i}" data-t="rev" inputmode="numeric" value="${PE.dobro? v*2 : (PE.rev[i] ?? 0)}" ${PE.dobro?'disabled':''} aria-label="Pontos revezamento ${i+1}º"></td></tr>`).join('') || `<tr><td colspan="3" class="vazio">Nenhuma posição. Use "+ posição".</td></tr>`;
+  } else {
+    PE = null;
+    $('corpoPontos').innerHTML = I.map((v,i)=>`<tr class="${i<3?'p'+(i+1):''}"><td>${i+1}º</td><td>${v}</td><td>${R[i] ?? '–'}</td></tr>`).join('') || `<tr><td colspan="3" class="vazio">Tabela ainda não carregada.</td></tr>`;
+  }
   $('regraRevez').textContent = dobro ? 'Revezamentos valem o dobro dos pontos da prova individual.' : 'Revezamentos têm pontuação própria, mostrada na tabela ao lado.';
   $('regrasFonte').textContent = `Pontuam as ${I.length} primeiras colocações. Os valores vêm da aba "Pontuação" da planilha oficial da competição e são atualizados aqui automaticamente.`;
 }
+function pontosAlterados(){ if(!PE) return false; const I=S.pontos.individual, R=S.pontos.revezamento;
+  const rv = PE.dobro ? PE.ind.map(v=>v*2) : PE.rev;
+  return PE.ind.length!==I.length || PE.ind.some((v,i)=>v!==I[i]) || rv.some((v,i)=>v!==R[i]); }
+$('corpoPontos').addEventListener('input', ev=>{ const t=ev.target; if(!PE||!t.dataset.t) return;
+  t.value = t.value.replace(/\D/g,'').slice(0,4); const v = Number(t.value)||0, i=+t.dataset.pi;
+  PE[t.dataset.t][i] = v;
+  if (t.dataset.t==='ind' && PE.dobro){ const o=$('corpoPontos').querySelector(`input[data-t="rev"][data-pi="${i}"]`); if(o) o.value=v*2; }
+  $('msgPontos').textContent = 'Alterações não salvas.'; });
+$('btPosMais').addEventListener('click', ()=>{ if(!PE) return; if(PE.ind.length>=30) return; PE.ind.push(0); PE.rev.push(0); renderRegras(); $('msgPontos').textContent='Alterações não salvas.'; });
+$('btPosMenos').addEventListener('click', ()=>{ if(!PE||!PE.ind.length) return; PE.ind.pop(); PE.rev.pop(); renderRegras(); $('msgPontos').textContent='Alterações não salvas.'; });
+$('chkDobro').addEventListener('change', ev=>{ if(!PE) return; PE.dobro = ev.target.checked; if(!PE.dobro) PE.rev = PE.ind.map(v=>v*2); renderRegras(); $('msgPontos').textContent='Alterações não salvas.'; });
+$('btDescartarPontos').addEventListener('click', ()=>{ PE=null; renderRegras(); $('msgPontos').textContent='Alterações descartadas.'; });
+$('btSalvarPontos').addEventListener('click', async ()=>{
+  if(!PE) return; if(!PE.ind.length){ $('msgPontos').textContent='Deixe pelo menos uma posição.'; return; }
+  const b=$('btSalvarPontos'); b.disabled=true; $('msgPontos').textContent='Salvando…';
+  try{
+    const r = await api('pontos', {ind: PE.ind.join(','), rev: PE.dobro?'':PE.rev.join(','), dobro: PE.dobro?'1':'0'});
+    if (r && r.erro==='codigo'){ sairEdicao('Código de edição inválido.'); return; }
+    if (!r || !r.ok) throw new Error(r&&r.erro||'erro');
+    S.pontos = r.pontos; PE=null; renderRegras(); $('msgPontos').textContent='Pontuação salva. Ranking recalculado.'; toast('Pontuação salva.');
+  }catch(e){ $('msgPontos').textContent='Não consegui salvar ('+(e.message||'sem conexão')+'). Tente de novo.'; }
+  finally{ b.disabled=false; }
+});
 function renderTudo(silencioso){
   renderProvasLista();
   if (silencioso) sincronizarLancar(); else renderLancar();
   if (S.vista==='classif') renderClassif();
   if (S.vista==='geral') renderGeral();
-  if (S.vista==='regras') renderRegras();
+  if (S.vista==='regras' && !pontosAlterados()) renderRegras();
 }
 function mostrarVista(v){
   S.vista = v;
@@ -698,6 +743,7 @@ function aplicarModo(){
   $('btEdicao').hidden = DEMO || !URL_API;
   $('btEdicao').textContent = EDIT ? 'Sair da edição' : 'Editar';
   if (!EDIT && S.vista==='lancar') mostrarVista('geral');
+  if (S.vista==='regras') { PE=null; renderRegras(); }
 }
 function abrirEntrada(msg){
   $('entrada').hidden=false; ['lancar','classif','geral','regras'].forEach(x=>$('v-'+x).hidden=true);
