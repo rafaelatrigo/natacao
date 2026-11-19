@@ -133,6 +133,10 @@ tr:last-child td{border-bottom:0}
 .filtros{display:flex;gap:6px;flex-wrap:wrap}
 .filtros button{font-weight:600;font-size:13px;padding:7px 12px;border-radius:999px;border:1px solid var(--linha);background:var(--card);color:var(--tx2)}
 .filtros button[aria-pressed="true"]{background:var(--agua-2);border-color:var(--agua-2);color:#fff}
+.barra-filtro{position:sticky;top:var(--h-top,96px);z-index:20;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;
+  padding:10px 12px;margin:-6px 0 0;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--linha);border-radius:12px;box-shadow:0 6px 18px -10px rgba(0,0,0,.35)}
+.barra-filtro select{flex:0 1 280px;min-width:0;border:1px solid var(--linha);border-radius:999px;padding:7px 12px;background:var(--bg);font-size:13px;font-weight:500}
 .grid-classif{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:16px}
 .grid-classif .card h3{font:700 16px var(--fonte-disp);text-transform:uppercase;padding:12px 14px 4px;display:flex;justify-content:space-between;gap:8px}
 .grid-classif .card h3 small{font:500 12px var(--fonte);color:var(--tx2);text-transform:none}
@@ -255,12 +259,14 @@ tr:last-child td{border-bottom:0}
   </section>
 
   <section class="vista secao" id="v-classif" hidden>
-    <div class="filtros" id="filtrosClassif"></div>
+    <div class="barra-filtro" id="barraFiltro">
+      <div class="filtros" id="filtrosClassif"></div>
+      <select id="irProva" aria-label="Ir para a prova"></select>
+    </div>
     <div class="grid-classif" id="gridClassif"></div>
   </section>
 
   <section class="vista secao" id="v-geral" hidden>
-    <div class="filtros" id="filtrosGeral"></div>
     <div class="podio" id="podio"></div>
     <div class="card tabela-wrap">
       <table class="geral"><thead id="cabGeral"></thead><tbody id="corpoGeral"></tbody></table>
@@ -290,7 +296,7 @@ tr:last-child td{border-bottom:0}
           <li>Soma dos pontos de todos os atletas e equipes da atlética em todas as provas.</li>
           <li>Desempate, nesta ordem: 1) menos W.O.; 2) mais 1º lugares; 3) mais 2º lugares, e assim até a última posição que pontua.</li>
           <li>Persistindo o empate, as atléticas dividem a posição. O regulamento prevê sorteio, feito pela organização.</li>
-          <li>Os filtros Feminino e Masculino somam só as provas daquela categoria. Revezamentos mistos entram apenas em "Todas".</li>
+          <li>Na aba Classificação, o filtro no topo mostra só as provas femininas ou masculinas. Revezamentos mistos aparecem em "Todas".</li>
         </ul></div>
         <p class="nota" id="regrasFonte"></p>
       </div>
@@ -450,6 +456,7 @@ function aplicarDados(d){
   if (!S.provas.find(p=>p.id===S.provaSel)) S.provaSel = S.provas[0] && S.provas[0].id;
   $('titulo').textContent = S.titulo;
   $('subtitulo').hidden = /ranking/i.test(S.titulo);
+  if (typeof medirTopo==='function') medirTopo();
   document.title = /nata/i.test(S.titulo) ? S.titulo : S.titulo + ' · Natação';
 }
 async function carregar(silencioso){
@@ -569,12 +576,13 @@ const FILTROS = ['Geral','Feminino','Masculino'];
 function chips(el, atual, nome){ el.innerHTML = FILTROS.map(f=>`<button type="button" data-${nome}="${f}" aria-pressed="${f===atual}">${f==='Geral'?'Todas':f}</button>`).join(''); }
 function renderClassif(){
   chips($('filtrosClassif'), S.filtroC, 'fc');
+  const psSel = S.provas.filter(p => S.filtroC==='Geral' || categoriaDaProva(p.nome)===S.filtroC);
+  $('irProva').innerHTML = `<option value="">Ir para a prova…</option>` + psSel.map(p=>`<option value="${esc(p.id)}">${p.ordem}. ${esc(p.nome)}</option>`).join('');
   const ps = S.provas.filter(p => S.filtroC==='Geral' || categoriaDaProva(p.nome)===S.filtroC);
   $('gridClassif').innerHTML = ps.map(p=>{ const [f,t]=progresso(p);
-    return `<div class="card classif"><h3>${esc(p.nome)}<small>${f}/${t} lançados</small></h3>${classHTML(linhasClassif(p))}</div>`; }).join('') || `<div class="vazio">Nenhuma prova nesta categoria.</div>`;
+    return `<div class="card classif" id="card-${esc(p.id)}"><h3>${esc(p.nome)}<small>${f}/${t} lançados</small></h3>${classHTML(linhasClassif(p))}</div>`; }).join('') || `<div class="vazio">Nenhuma prova nesta categoria.</div>`;
 }
 function renderGeral(){
-  chips($('filtrosGeral'), S.filtroG, 'fg');
   const L = rankingGeral(S.provas, S.inscricoes, S.pontos, S.filtroG);
   const NP = S.pontos.individual.length;
   $('podio').innerHTML = L.filter(t=>t.pts>0).slice(0,3).map((t,i)=>`<div class="card p${t.pos<=3?t.pos:''}"><span class="lugar">${t.pos}º lugar</span><span class="eq">${esc(t.nome)}</span><span class="val">${t.pts}<small> pontos</small></span></div>`).join('');
@@ -608,7 +616,14 @@ document.querySelector('nav.abas').addEventListener('click', ev=>{ const b=ev.ta
 $('listaProvas').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-prova]'); if(!b) return; S.provaSel=b.dataset.prova; LS.set('prova',S.provaSel); renderProvasLista(); renderLancar(); });
 $('selProva').addEventListener('change', ev=>{ S.provaSel=ev.target.value; LS.set('prova',S.provaSel); renderProvasLista(); renderLancar(); });
 $('filtrosClassif').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-fc]'); if(b){ S.filtroC=b.dataset.fc; renderClassif(); } });
-$('filtrosGeral').addEventListener('click', ev=>{ const b=ev.target.closest('button[data-fg]'); if(b){ S.filtroG=b.dataset.fg; renderGeral(); } });
+$('irProva').addEventListener('change', ev=>{
+  const c = document.getElementById('card-'+ev.target.value); ev.target.value='';
+  if (!c) return;
+  const topo = document.querySelector('header').offsetHeight + $('barraFiltro').offsetHeight + 12;
+  window.scrollTo({top: c.getBoundingClientRect().top + window.scrollY - topo, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+});
+function medirTopo(){ document.documentElement.style.setProperty('--h-top', document.querySelector('header').offsetHeight + 'px'); }
+window.addEventListener('resize', medirTopo); medirTopo();
 
 function confirmarCampo(inp){
   const tr = inp.closest('tr[data-id]'); if(!tr) return true;
