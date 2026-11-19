@@ -403,6 +403,6 @@ function rankingGeral(provas, inscricoes, pontos, filtro) {
 function formatarTempo(seg) {
   if (typeof seg !== 'number' || !isFinite(seg)) return '';
   var ms = Math.round(seg * 1000), m = Math.floor(ms / 60000), r = ms - m * 60000, s = Math.floor(r / 1000), f = r - s * 1000;
-  var fr = (f % 10 === 0) ? String(f / 10).padStart(2, '0') : String(f).padStart(3, '0');
+  var fr = String(f).padStart(3, '0');   // sempre 3 casas (milésimos)
   return (m ? m + ':' + String(s).padStart(2, '0') : String(s)) + ',' + fr;
 }

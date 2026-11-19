@@ -188,7 +188,7 @@ tr:last-child td{border-bottom:0}
 <body>
 <header>
   <div class="top">
-    <div class="marca"><h1 id="titulo">Natação</h1><small>Tempos e ranking</small></div>
+    <div class="marca"><h1 id="titulo">Natação</h1><small id="subtitulo">Tempos e ranking</small></div>
     <div class="acoes-top"><div class="estado" id="estado"><span class="dot" id="dot"></span><span id="estadoTx">Conectando…</span></div><button type="button" class="bt-edicao" id="btEdicao" hidden>Editar</button></div>
   </div>
   <nav class="abas" role="tablist">
@@ -226,7 +226,7 @@ tr:last-child td{border-bottom:0}
               <tbody id="corpo"></tbody>
             </table>
           </div>
-          <div class="dica">Tempo: <span class="num">28,64</span> ou <span class="num">1:05,32</span> (também aceita <span class="num">1'05"32</span>). Três casas = milésimos (<span class="num">1:20,044</span>). <b>Enter</b> salva e vai para o próximo atleta. Apague o tempo para limpar.</div>
+          <div class="dica">Tempo: digite só os números, o campo monta sozinho minutos, segundos e milésimos. <span class="num">0125030</span> vira <span class="num">01:25,030</span> e <span class="num">0028640</span> vira <span class="num">00:28,640</span>. <b>Enter</b> salva e vai para o próximo atleta. Apague o tempo para limpar.</div>
           <form class="incluir" id="formIncluir">
             <select id="novoProva" aria-label="Prova do novo atleta" style="flex:1 1 220px;min-width:0;border:1px solid var(--linha);border-radius:8px;padding:8px 10px;background:var(--bg)"></select>
             <input id="novoNome" placeholder="Incluir atleta (nome)" required>
@@ -317,7 +317,7 @@ function rankingGeral(provas, inscricoes, pontos, filtro) {
 function formatarTempo(seg) {
   if (typeof seg !== 'number' || !isFinite(seg)) return '';
   var ms = Math.round(seg * 1000), m = Math.floor(ms / 60000), r = ms - m * 60000, s = Math.floor(r / 1000), f = r - s * 1000;
-  var fr = (f % 10 === 0) ? String(f / 10).padStart(2, '0') : String(f).padStart(3, '0');
+  var fr = String(f).padStart(3, '0');   // sempre 3 casas (milésimos)
   return (m ? m + ':' + String(s).padStart(2, '0') : String(s)) + ',' + fr;
 }
 
@@ -374,6 +374,29 @@ function lerTempo(txt){
   return {seg: Math.round(total*1000)/1000};
 }
 
+/* ---------- Máscara do campo de tempo: só números -> MM:SS,mmm ---------- */
+function mascaraTempo(v){
+  const d = String(v||'').replace(/\D/g,'').slice(0,7);
+  let o = d.slice(0,2);
+  if (d.length > 2) o += ':' + d.slice(2,4);
+  if (d.length > 4) o += ',' + d.slice(4,7);
+  return o;
+}
+function tempoDoCampo(v){
+  const d = String(v||'').replace(/\D/g,'');
+  if (!d) return {vazio:true};
+  if (d.length < 4) return {erro:true};
+  const min = +d.slice(0,2), sec = +d.slice(2,4), ms = +((d.slice(4,7)+'000').slice(0,3));
+  if (sec >= 60) return {erro:true};
+  const total = min*60 + sec + ms/1000;
+  return total > 0 ? {seg: Math.round(total*1000)/1000} : {erro:true};
+}
+function campoTempo(seg){
+  if (typeof seg !== 'number' || !isFinite(seg)) return '';
+  const ms = Math.round(seg*1000), m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000), f = ms%1000;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + ',' + String(f).padStart(3,'0');
+}
+
 /* ---------- Estado / carga ---------- */
 function setEstado(tipo, txt){ $('dot').className = 'dot '+tipo; $('estadoTx').textContent = txt; }
 function hora(){ return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
@@ -386,7 +409,8 @@ function aplicarDados(d){
   S.inscricoes = (d.inscricoes||[]).map(e => pend.get(e.id) ? (locais.get(e.id)||e) : e);
   if (!S.provas.find(p=>p.id===S.provaSel)) S.provaSel = S.provas[0] && S.provas[0].id;
   $('titulo').textContent = S.titulo;
-  document.title = S.titulo + ' · Natação';
+  $('subtitulo').hidden = /ranking/i.test(S.titulo);
+  document.title = /nata/i.test(S.titulo) ? S.titulo : S.titulo + ' · Natação';
 }
 async function carregar(silencioso){
   try{
@@ -447,7 +471,7 @@ function linhaHTML(e, i){
     <td class="c-nome"><input class="campo nome" data-k="atleta" value="${esc(e.atleta)}" aria-label="${rev?'Equipe':'Atleta'}">${e.integrantes?`<span class="integr">${esc(e.integrantes)}</span>`:''}</td>
     <td class="c-atl"><input class="campo" data-k="atletica" value="${esc(e.atletica)}" placeholder="Atlética" aria-label="Atlética"></td>
     <td class="c-inst"><input class="campo" style="min-width:100px" data-k="inst" placeholder="Instituição" value="${esc(e.inst)}" aria-label="Instituição"></td>
-    <td class="c-tempo"><input class="campo tempo" data-k="tempo" inputmode="decimal" value="${esc(formatarTempo(e.seg))}" placeholder="—" aria-label="Tempo"></td>
+    <td class="c-tempo"><input class="campo tempo" data-k="tempo" inputmode="numeric" autocomplete="off" maxlength="9" value="${esc(campoTempo(e.seg))}" placeholder="00:00,000" aria-label="Tempo (digite só os números)"></td>
     <td class="c-sit"><span class="sit"><button type="button" data-sit="" aria-pressed="${sit===''}">Normal</button><button type="button" class="dq" data-sit="Desclassificado" aria-pressed="${sit==='Desclassificado'}">DESC</button><button type="button" class="wo" data-sit="W.O." aria-pressed="${sit==='W.O.'}">W.O.</button></span></td>
     <td class="c-obs"><input class="campo" data-k="obs" value="${esc(e.obs)}" placeholder="Observação" aria-label="Observação"></td>
     <td class="st c-st ${estadoLinha[e.id]||''}"></td>
@@ -482,7 +506,7 @@ function sincronizarLancar(){
   }
   L.forEach((e,i)=>{ const tr=trs[i];
     tr.querySelectorAll('input[data-k]').forEach(inp=>{ if(inp===document.activeElement) return;
-      const v = inp.dataset.k==='tempo' ? formatarTempo(e.seg) : (e[inp.dataset.k]||''); if(inp.value!==v) { inp.value=v; inp.classList.remove('inv'); } });
+      const v = inp.dataset.k==='tempo' ? campoTempo(e.seg) : (e[inp.dataset.k]||''); if(inp.value!==v) { inp.value=v; inp.classList.remove('inv'); } });
     marcarLinha(e.id); });
   const [f,t] = progresso(p); $('infoProva').textContent = `${p.ordem}ª prova · ${t} ${p.revezamento?'equipes':'atletas'} · ${f} lançados`;
   renderClassProva();
@@ -542,11 +566,11 @@ function confirmarCampo(inp){
   const tr = inp.closest('tr[data-id]'); if(!tr) return true;
   const id = tr.dataset.id, e = S.inscricoes.find(x=>x.id===id), k = inp.dataset.k;
   if (k==='tempo'){
-    const r = lerTempo(inp.value);
-    if (r.erro){ inp.classList.add('inv'); toast('Tempo inválido. Use 28,64 ou 1:05,32.'); return false; }
+    const r = tempoDoCampo(inp.value);
+    if (r.erro){ inp.classList.add('inv'); toast('Tempo incompleto ou inválido. Digite minutos, segundos e milésimos: 0028640 = 00:28,640.'); return false; }
     inp.classList.remove('inv');
     const seg = r.vazio ? null : r.seg;
-    inp.value = formatarTempo(seg);
+    inp.value = campoTempo(seg);
     if (seg !== e.seg) salvar(id, {local:{seg}, envio:{seg: seg===null?'':seg}});
     return true;
   }
@@ -558,6 +582,10 @@ function confirmarCampo(inp){
   return true;
 }
 $('corpo').addEventListener('change', ev=>{ if(ev.target.matches('input[data-k]')) confirmarCampo(ev.target); });
+$('corpo').addEventListener('input', ev=>{ const t=ev.target; if(!t.matches('input[data-k="tempo"]')) return; const v=mascaraTempo(t.value); if(t.value!==v) t.value=v; t.classList.remove('inv'); });
+let focoPorToque = false;
+$('corpo').addEventListener('pointerdown', ()=>{ focoPorToque = true; });
+$('corpo').addEventListener('focusin', ev=>{ const t=ev.target; if(focoPorToque && t.matches('input[data-k="tempo"]') && t.value){ const v0=t.value; setTimeout(()=>{ if(t.value===v0) t.select(); },0); } focoPorToque = false; });
 $('corpo').addEventListener('keydown', ev=>{
   if (ev.key!=='Enter' || !ev.target.matches('input[data-k]')) return;
   ev.preventDefault();
